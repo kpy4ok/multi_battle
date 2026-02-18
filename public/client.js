@@ -139,14 +139,31 @@ function leaveGame() {
 function requestRestart() { socket.emit('restartGame'); }
 
 // ── Canvas resize ─────────────────────────────────────────
+function getSafeArea() {
+  // Read CSS env() safe area values via a temp element
+  const el = document.createElement('div');
+  el.style.cssText = 'position:fixed;top:env(safe-area-inset-top,0px);left:env(safe-area-inset-left,0px);right:env(safe-area-inset-right,0px);bottom:env(safe-area-inset-bottom,0px);pointer-events:none;visibility:hidden';
+  document.body.appendChild(el);
+  const rect = el.getBoundingClientRect();
+  document.body.removeChild(el);
+  return {
+    top:    parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 0,
+    bottom: parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0,
+  };
+}
+
 function resizeCanvas() {
-  const mob      = isMobile();
-  const ctrlH    = mob ? 190 : 0;
+  const mob = isMobile();
+  const ctrlH   = mob ? 190 : 0;
+  const safePad = mob ? (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sat')) || 44) : 0;
+  const safeBot = mob ? (parseInt(getComputedStyle(document.documentElement).getPropertyValue('--sab')) || 0)  : 0;
   const sidebarW = mob ? 0 : 220;
-  const pad      = 12;
-  const avW = window.innerWidth  - sidebarW - pad*2;
-  const avH = window.innerHeight - ctrlH    - pad*2;
+  const pad = 8;
+
+  const avW = window.innerWidth  - sidebarW - pad * 2;
+  const avH = window.innerHeight - ctrlH - safeBot - safePad - pad * 2;
   const size = Math.min(avW, avH, 560);
+
   canvas.style.width  = size + 'px';
   canvas.style.height = size + 'px';
 }
@@ -261,8 +278,7 @@ function sendChat() {
 
 // ── HUD ───────────────────────────────────────────────────
 function updateHUD(state) {
-  const hud = document.getElementById('playerHud');
-  if (hud) hud.innerHTML = state.players.map(p => `
+  const playerRowsHTML = state.players.map(p => `
     <div class="player-row">
       <div class="player-color-dot" style="background:${p.color}"></div>
       <span>${escHtml(p.name.slice(0,8))}</span>
@@ -270,23 +286,60 @@ function updateHUD(state) {
       <span class="player-score">${p.score}</span>
     </div>`).join('');
 
+  const hud = document.getElementById('playerHud');
+  if (hud) hud.innerHTML = playerRowsHTML;
+
   const total = (state.enemiesRemaining||0) + (state.enemiesOnField||0);
+  const enemyIconsHTML = Array(Math.max(0, Math.min(total, 30))).fill('<div class="enemy-icon"></div>').join('');
+  const enemyLeftText  = `${state.enemiesRemaining} LEFT`;
+
   const ctr = document.getElementById('enemyCounter');
-  if (ctr) ctr.innerHTML = Array(Math.max(0,total)).fill('<div class="enemy-icon"></div>').join('');
+  if (ctr) ctr.innerHTML = enemyIconsHTML;
   const el = document.getElementById('enemiesLeft');
   if (el) el.textContent = `${state.enemiesRemaining} REMAINING`;
+
+  // ── Mobile mini HUD ──
+  const mobPlayers = document.getElementById('mobPlayerHud');
+  if (mobPlayers) {
+    mobPlayers.innerHTML = state.players.map(p => `
+      <div class="mob-player-row">
+        <div class="mob-color-dot" style="background:${p.color}"></div>
+        <span>${escHtml(p.name.slice(0,6))}</span>
+        <span class="mob-lives">${'♥'.repeat(Math.max(0,p.lives))}</span>
+        <span class="mob-score">${p.score}</span>
+      </div>`).join('');
+  }
+
+  const mobEnemy = document.getElementById('mobEnemyRow');
+  if (mobEnemy) {
+    mobEnemy.innerHTML = Array(Math.max(0, Math.min(total, 20))).fill('<div class="mob-enemy-icon"></div>').join('');
+  }
+  const mobLeft = document.getElementById('mobEnemiesLeft');
+  if (mobLeft) mobLeft.textContent = enemyLeftText;
 }
 
 function addChatMessage(type, msg, name) {
-  const el = document.getElementById('chatMessages');
-  if (!el) return;
-  const div = document.createElement('div');
-  div.className = `chat-msg ${type}`;
-  div.innerHTML = type==='chat'
-    ? `<span class="chat-name">${escHtml(name)}:</span> ${escHtml(msg)}`
-    : escHtml(msg);
-  el.appendChild(div);
-  el.scrollTop = el.scrollHeight;
+  const append = (el) => {
+    if (!el) return;
+    const div = document.createElement('div');
+    div.className = `chat-msg ${type}`;
+    div.innerHTML = type==='chat'
+      ? `<span class="chat-name">${escHtml(name)}:</span> ${escHtml(msg)}`
+      : escHtml(msg);
+    el.appendChild(div);
+    while (el.children.length > 40) el.removeChild(el.firstChild);
+    el.scrollTop = el.scrollHeight;
+  };
+  append(document.getElementById('chatMessages'));
+  append(document.getElementById('mobChatMessages'));
+}
+
+function sendMobChat() {
+  const inp = document.getElementById('mobChatInput');
+  if (!inp || !inp.value.trim()) return;
+  socket.emit('chat', inp.value.trim());
+  inp.value = '';
+  inp.blur();
 }
 
 function showGameOver(state) {
