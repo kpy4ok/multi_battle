@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BATTLE CITY ONLINE</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  :root {
+    --bg: #0a0a0f;
+    --panel: #111118;
+    --border: #FFD700;
+    --border2: #8B6914;
+    --text: #FFD700;
+    --text2: #FFF8DC;
+    --red: #FF4444;
+    --green: #44FF88;
+    --blue: #44AAFF;
+    --gray: #444;
+    --scanline: rgba(0,0,0,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Press Start 2P', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+    image-rendering: pixelated;
+  }
+
+  /* CRT scanline effect */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      var(--scanline) 2px,
+      var(--scanline) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; }
+  .screen.active { display: flex; }
+
+  /* ── LOBBY ── */
+  #lobbyScreen {
+    flex-direction: column;
+    align-items: center;
+    padding: 20px;
+    min-height: 100vh;
+  }
+
+  .logo {
+    margin: 20px 0 10px;
+    text-align: center;
+    animation: flicker 3s infinite;
+  }
+  .logo h1 {
+    font-size: clamp(12px, 3vw, 22px);
+    color: var(--border);
+    text-shadow: 0 0 10px #FFD700, 0 0 30px #FF8C00;
+    letter-spacing: 4px;
+  }
+  .logo .sub {
+    font-size: 8px;
+    color: #888;
+    margin-top: 8px;
+    letter-spacing: 6px;
+  }
+
+  @keyframes flicker {
+    0%,95%,100% { opacity: 1; }
+    96% { opacity: 0.8; }
+    97% { opacity: 1; }
+    98% { opacity: 0.6; }
+    99% { opacity: 1; }
+  }
+
+  .lobby-layout {
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    gap: 16px;
+    width: 100%;
+    max-width: 900px;
+    margin-top: 20px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 2px solid var(--border2);
+    padding: 16px;
+    position: relative;
+  }
+  .panel::before {
+    content: attr(data-title);
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--panel);
+    padding: 0 8px;
+    font-size: 8px;
+    color: var(--border);
+    letter-spacing: 2px;
+  }
+  .panel.glow { border-color: var(--border); box-shadow: 0 0 15px rgba(255,215,0,0.2); }
+
+  /* Room list */
+  #roomList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 340px;
+    overflow-y: auto;
+  }
+  #roomList::-webkit-scrollbar { width: 6px; }
+  #roomList::-webkit-scrollbar-track { background: #111; }
+  #roomList::-webkit-scrollbar-thumb { background: var(--border2); }
+
+  .room-item {
+    display: grid;
+    grid-template-columns: 1fr auto auto auto;
+    gap: 8px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #333;
+    background: #0d0d14;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 7px;
+  }
+  .room-item:hover { border-color: var(--border); background: #1a1a25; }
+  .room-item.selected { border-color: var(--border); background: #1a1a22; box-shadow: 0 0 8px rgba(255,215,0,0.2); }
+
+  .room-name { color: var(--text2); font-size: 8px; }
+  .room-map { color: #888; }
+  .room-players { color: var(--green); }
+  .room-status { padding: 2px 6px; font-size: 6px; }
+  .room-status.waiting { color: var(--green); border: 1px solid var(--green); }
+  .room-status.playing { color: var(--blue); border: 1px solid var(--blue); }
+  .room-status.finished { color: var(--red); border: 1px solid var(--red); }
+
+  /* Create room form */
+  .form-group { margin-bottom: 12px; }
+  .form-group label { display: block; font-size: 7px; color: #888; margin-bottom: 6px; }
+
+  input[type="text"], select {
+    width: 100%;
+    background: #0d0d14;
+    border: 1px solid #444;
+    color: var(--text2);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    padding: 8px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input[type="text"]:focus, select:focus { border-color: var(--border); }
+  select option { background: #111; }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 8px;
+    cursor: pointer;
+    border: 2px solid;
+    background: transparent;
+    transition: all 0.15s;
+    letter-spacing: 1px;
+    text-align: center;
+  }
+  .btn-gold {
+    color: var(--border);
+    border-color: var(--border);
+  }
+  .btn-gold:hover {
+    background: var(--border);
+    color: #000;
+    box-shadow: 0 0 15px rgba(255,215,0,0.5);
+  }
+  .btn-green {
+    color: var(--green);
+    border-color: var(--green);
+    margin-top: 8px;
+  }
+  .btn-green:hover {
+    background: var(--green);
+    color: #000;
+  }
+  .btn-red {
+    color: var(--red);
+    border-color: var(--red);
+    margin-top: 8px;
+  }
+  .btn-red:hover { background: var(--red); color: #fff; }
+
+  /* ── GAME SCREEN ── */
+  #gameScreen {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 16px;
+    gap: 16px;
+    min-height: 100vh;
+  }
+
+  #gameCanvas {
+    display: block;
+    border: 3px solid var(--border2);
+    box-shadow: 0 0 20px rgba(255,215,0,0.15);
+    image-rendering: pixelated;
+    flex-shrink: 0;
+  }
+
+  .game-sidebar {
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex-shrink: 0;
+  }
+
+  .sidebar-section {
+    background: var(--panel);
+    border: 1px solid var(--border2);
+    padding: 12px;
+  }
+  .sidebar-section h3 {
+    font-size: 7px;
+    color: var(--border);
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+  }
+
+  .player-hud {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .player-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 6px;
+    color: var(--text2);
+  }
+  .player-color-dot {
+    width: 8px; height: 8px;
+    border-radius: 0;
+    flex-shrink: 0;
+  }
+  .player-lives { color: var(--red); }
+  .player-score { color: var(--green); margin-left: auto; }
+
+  .enemy-counter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .enemy-icon {
+    width: 8px; height: 8px;
+    background: var(--red);
+    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
+  }
+
+  /* Chat */
+  #chatMessages {
+    height: 120px;
+    overflow-y: auto;
+    font-size: 6px;
+    color: #aaa;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  #chatMessages::-webkit-scrollbar { width: 3px; }
+  #chatMessages::-webkit-scrollbar-thumb { background: #444; }
+  .chat-msg { word-break: break-word; }
+  .chat-msg .chat-name { color: var(--border); }
+  .chat-msg.system { color: #555; font-style: italic; }
+
+  #chatInput {
+    font-size: 7px;
+    padding: 6px;
+  }
+
+  /* Controls help */
+  .controls-help { font-size: 6px; color: #555; line-height: 1.8; }
+
+  /* Game overlay */
+  #gameOverlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 20px;
+  }
+  #gameOverlay.show { display: flex; }
+  #overlayTitle {
+    font-size: clamp(16px, 4vw, 32px);
+    text-align: center;
+    animation: blink 0.8s infinite;
+  }
+  #overlayTitle.win { color: var(--green); text-shadow: 0 0 20px var(--green); }
+  #overlayTitle.lose { color: var(--red); text-shadow: 0 0 20px var(--red); }
+
+  @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+
+  .tanks-animation {
+    display: flex;
+    gap: 20px;
+    margin: 10px 0;
+  }
+  .tank-icon { font-size: 32px; animation: tankBounce 0.5s infinite alternate; }
+  @keyframes tankBounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
+
+  /* Ping */
+  #pingDisplay {
+    position: fixed;
+    top: 8px;
+    right: 8px;
+    font-size: 7px;
+    color: #444;
+    z-index: 50;
+  }
+
+  @media (max-width: 720px) {
+    .lobby-layout { grid-template-columns: 1fr; }
+    #gameScreen { flex-direction: column; align-items: center; }
+    .game-sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; }
+    .sidebar-section { flex: 1; min-width: 150px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── LOBBY SCREEN ── -->
+<div id="lobbyScreen" class="screen active">
+  <div class="logo">
+    <h1>⚔ BATTLE CITY ONLINE ⚔</h1>
+    <div class="sub">MULTIPLAYER · 8-BIT · ARCADE</div>
+  </div>
+
+  <div class="lobby-layout">
+    <!-- Room list -->
+    <div>
+      <div class="panel glow" data-title="SERVER BROWSER" style="margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <span style="font-size:7px;color:#888">SELECT A ROOM TO JOIN</span>
+          <button class="btn btn-gold" style="width:auto;padding:6px 12px;font-size:7px" onclick="refreshRooms()">↻ REFRESH</button>
+        </div>
+        <div id="roomList">
+          <div style="font-size:7px;color:#444;text-align:center;padding:20px">LOADING ROOMS...</div>
+        </div>
+      </div>
+
+      <div class="panel" data-title="YOUR CALLSIGN">
+        <div class="form-group">
+          <label>PLAYER NAME</label>
+          <input type="text" id="playerName" placeholder="TANK_COMMANDER" maxlength="12">
+        </div>
+        <button class="btn btn-green" onclick="joinSelected()">▶ JOIN ROOM</button>
+      </div>
+    </div>
+
+    <!-- Create room -->
+    <div>
+      <div class="panel" data-title="CREATE ROOM" style="margin-bottom:12px">
+        <div class="form-group">
+          <label>ROOM NAME</label>
+          <input type="text" id="newRoomName" placeholder="MY BATTLE ROOM" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label>MAP</label>
+          <select id="mapSelect">
+            <option value="0">Classic</option>
+            <option value="1">Fortress</option>
+          </select>
+        </div>
+        <button class="btn btn-gold" onclick="createRoom()">✚ CREATE ROOM</button>
+      </div>
+
+      <div class="panel" data-title="HOW TO PLAY">
+        <div class="controls-help">
+          WASD / ARROWS → MOVE<br><br>
+          SPACE / ENTER → FIRE<br><br>
+          DESTROY ALL ENEMY<br>
+          TANKS TO WIN!<br><br>
+          PROTECT YOUR BASE<br>
+          FROM ENEMIES!
+        </div>
+      </div>
+
+      <div class="panel" data-title="LEGEND" style="margin-top:12px">
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:6px;color:#aaa">
+          <span>🟫 BRICK — DESTROYABLE</span>
+          <span>⬜ STEEL — INDESTRUCTIBLE</span>
+          <span>🦅 EAGLE — PROTECT IT!</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── GAME SCREEN ── -->
+<div id="gameScreen" class="screen">
+  <div id="pingDisplay">PING: --ms</div>
+
+  <canvas id="gameCanvas" width="416" height="416"></canvas>
+
+  <div class="game-sidebar">
+    <div class="sidebar-section">
+      <h3>▶ PLAYERS</h3>
+      <div class="player-hud" id="playerHud"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>⚠ ENEMIES</h3>
+      <div class="enemy-counter" id="enemyCounter"></div>
+      <div id="enemiesLeft" style="font-size:6px;color:#888;margin-top:8px"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <h3>💬 CHAT</h3>
+      <div id="chatMessages"></div>
+      <input type="text" id="chatInput" placeholder="PRESS ENTER..." maxlength="60"
+        onkeydown="if(event.key==='Enter') sendChat()">
+    </div>
+
+    <div class="sidebar-section">
+      <h3>🎮 CONTROLS</h3>
+      <div class="controls-help">
+        WASD/ARROWS — MOVE<br>
+        SPACE/ENTER — FIRE<br><br>
+        <span style="color:#555">ESC — LEAVE ROOM</span>
+      </div>
+    </div>
+
+    <button class="btn btn-red" onclick="leaveGame()" style="width:100%">✕ LEAVE</button>
+  </div>
+</div>
+
+<!-- Game Over Overlay -->
+<div id="gameOverlay">
+  <div id="overlayTitle"></div>
+  <div class="tanks-animation">
+    <div class="tank-icon">🛡</div>
+    <div class="tank-icon" style="animation-delay:0.25s">⚔</div>
+    <div class="tank-icon" style="animation-delay:0.5s">🛡</div>
+  </div>
+  <div id="overlayScore" style="font-size:9px;color:#aaa"></div>
+  <button class="btn btn-green" style="width:200px" onclick="requestRestart()">↺ PLAY AGAIN</button>
+  <button class="btn btn-red" style="width:200px" onclick="leaveGame()">⬅ LOBBY</button>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
+</body>
+</html>
