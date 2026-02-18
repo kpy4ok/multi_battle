@@ -78,6 +78,7 @@ socket.on('joinedRoom', ({ roomId, playerId, mapData: md }) => {
 
 socket.on('gameState', (state) => {
   gameState = state;
+  if (state.mapData) mapData = state.mapData;
   if (state.gameOver) showGameOver(state);
   updateHUD(state);
 });
