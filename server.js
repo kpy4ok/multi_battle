@@ -52,7 +52,18 @@ function startStateLoop(room) {
     const g = room.game;
     if (!g) return;
     io.to(room.id).emit('gameState', g.getState());
-    if (g.gameOver) clearInterval(room.stateInterval);
+    if (g.gameOver) {
+      clearInterval(room.stateInterval);
+      // Auto-reset room 35s after game ends so it becomes joinable again
+      room.autoResetTimer = setTimeout(() => {
+        if (!room.game || !room.game.gameOver) return;
+        console.log(`[auto-reset] ${room.name}`);
+        room.game.stop();
+        room.game = null;
+        io.to(room.id).emit('serverReset');   // kick remaining clients to lobby
+        io.emit('roomList', getRoomList());
+      }, 35000);
+    }
   }, 33);
 }
 
@@ -130,6 +141,9 @@ io.on('connection', (socket) => {
   socket.on('restartGame', () => {
     const room = rooms[socket.data.roomId];
     if (!room || !room.game || !room.game.gameOver) return;
+
+    // Cancel auto-reset if pending
+    if (room.autoResetTimer) { clearTimeout(room.autoResetTimer); room.autoResetTimer = null; }
 
     room.game.stop();
     clearInterval(room.stateInterval);
