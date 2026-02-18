@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <title>BATTLE CITY ONLINE</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -17,340 +18,287 @@
     --red: #FF4444;
     --green: #44FF88;
     --blue: #44AAFF;
-    --gray: #444;
-    --scanline: rgba(0,0,0,0.15);
+    --scanline: rgba(0,0,0,0.12);
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
 
   body {
     background: var(--bg);
     color: var(--text);
     font-family: 'Press Start 2P', monospace;
     min-height: 100vh;
-    overflow-x: hidden;
-    image-rendering: pixelated;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
   }
-
-  /* CRT scanline effect */
   body::after {
     content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      var(--scanline) 2px,
-      var(--scanline) 4px
-    );
-    pointer-events: none;
-    z-index: 9999;
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--scanline) 2px, var(--scanline) 4px);
+    pointer-events: none; z-index: 9999;
   }
 
-  /* ── SCREENS ── */
   .screen { display: none; }
   .screen.active { display: flex; }
 
-  /* ── LOBBY ── */
+  /* ── LOBBY ─────────────────────────────────────────────── */
   #lobbyScreen {
     flex-direction: column;
     align-items: center;
-    padding: 20px;
+    padding: 16px;
     min-height: 100vh;
+    overflow-y: auto;
+    touch-action: pan-y;
   }
 
-  .logo {
-    margin: 20px 0 10px;
-    text-align: center;
-    animation: flicker 3s infinite;
-  }
-  .logo h1 {
-    font-size: clamp(12px, 3vw, 22px);
-    color: var(--border);
-    text-shadow: 0 0 10px #FFD700, 0 0 30px #FF8C00;
-    letter-spacing: 4px;
-  }
-  .logo .sub {
-    font-size: 8px;
-    color: #888;
-    margin-top: 8px;
-    letter-spacing: 6px;
-  }
+  .logo { margin: 12px 0 8px; text-align: center; animation: flicker 3s infinite; }
+  .logo h1 { font-size: clamp(10px, 2.8vw, 20px); color: var(--border); text-shadow: 0 0 10px #FFD700, 0 0 30px #FF8C00; letter-spacing: 3px; }
+  .logo .sub { font-size: 7px; color: #888; margin-top: 6px; letter-spacing: 4px; }
 
-  @keyframes flicker {
-    0%,95%,100% { opacity: 1; }
-    96% { opacity: 0.8; }
-    97% { opacity: 1; }
-    98% { opacity: 0.6; }
-    99% { opacity: 1; }
-  }
+  @keyframes flicker { 0%,95%,100%{opacity:1} 96%{opacity:.8} 97%{opacity:1} 98%{opacity:.6} 99%{opacity:1} }
 
   .lobby-layout {
     display: grid;
-    grid-template-columns: 1fr 280px;
-    gap: 16px;
+    grid-template-columns: 1fr 260px;
+    gap: 14px;
     width: 100%;
-    max-width: 900px;
-    margin-top: 20px;
+    max-width: 860px;
+    margin-top: 14px;
   }
 
   .panel {
     background: var(--panel);
     border: 2px solid var(--border2);
-    padding: 16px;
+    padding: 14px;
     position: relative;
   }
   .panel::before {
     content: attr(data-title);
-    position: absolute;
-    top: -10px;
-    left: 12px;
-    background: var(--panel);
-    padding: 0 8px;
-    font-size: 8px;
-    color: var(--border);
-    letter-spacing: 2px;
+    position: absolute; top: -9px; left: 10px;
+    background: var(--panel); padding: 0 6px;
+    font-size: 7px; color: var(--border); letter-spacing: 2px;
   }
-  .panel.glow { border-color: var(--border); box-shadow: 0 0 15px rgba(255,215,0,0.2); }
+  .panel.glow { border-color: var(--border); box-shadow: 0 0 14px rgba(255,215,0,0.2); }
 
-  /* Room list */
-  #roomList {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    max-height: 340px;
-    overflow-y: auto;
-  }
-  #roomList::-webkit-scrollbar { width: 6px; }
-  #roomList::-webkit-scrollbar-track { background: #111; }
+  #roomList { display: flex; flex-direction: column; gap: 7px; max-height: 300px; overflow-y: auto; }
+  #roomList::-webkit-scrollbar { width: 5px; }
   #roomList::-webkit-scrollbar-thumb { background: var(--border2); }
 
   .room-item {
-    display: grid;
-    grid-template-columns: 1fr auto auto auto;
-    gap: 8px;
-    align-items: center;
-    padding: 10px 12px;
-    border: 1px solid #333;
-    background: #0d0d14;
-    cursor: pointer;
-    transition: all 0.15s;
-    font-size: 7px;
+    display: grid; grid-template-columns: 1fr auto auto auto;
+    gap: 6px; align-items: center;
+    padding: 9px 10px; border: 1px solid #333;
+    background: #0d0d14; cursor: pointer; font-size: 7px;
+    transition: all .15s;
   }
-  .room-item:hover { border-color: var(--border); background: #1a1a25; }
-  .room-item.selected { border-color: var(--border); background: #1a1a22; box-shadow: 0 0 8px rgba(255,215,0,0.2); }
-
+  .room-item:hover, .room-item.selected { border-color: var(--border); background: #1a1a22; }
   .room-name { color: var(--text2); font-size: 8px; }
   .room-map { color: #888; }
   .room-players { color: var(--green); }
-  .room-status { padding: 2px 6px; font-size: 6px; }
-  .room-status.waiting { color: var(--green); border: 1px solid var(--green); }
-  .room-status.playing { color: var(--blue); border: 1px solid var(--blue); }
-  .room-status.finished { color: var(--red); border: 1px solid var(--red); }
+  .room-status { padding: 2px 5px; font-size: 6px; border: 1px solid; }
+  .room-status.waiting  { color: var(--green); border-color: var(--green); }
+  .room-status.playing  { color: var(--blue);  border-color: var(--blue);  }
+  .room-status.finished { color: var(--red);   border-color: var(--red);   }
 
-  /* Create room form */
-  .form-group { margin-bottom: 12px; }
-  .form-group label { display: block; font-size: 7px; color: #888; margin-bottom: 6px; }
+  .form-group { margin-bottom: 10px; }
+  .form-group label { display: block; font-size: 7px; color: #888; margin-bottom: 5px; }
 
   input[type="text"], select {
-    width: 100%;
-    background: #0d0d14;
-    border: 1px solid #444;
-    color: var(--text2);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    padding: 8px;
-    outline: none;
-    transition: border-color 0.2s;
+    width: 100%; background: #0d0d14; border: 1px solid #444;
+    color: var(--text2); font-family: 'Press Start 2P', monospace;
+    font-size: 8px; padding: 8px; outline: none;
   }
   input[type="text"]:focus, select:focus { border-color: var(--border); }
   select option { background: #111; }
 
   .btn {
-    display: block;
-    width: 100%;
-    padding: 10px;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 8px;
-    cursor: pointer;
-    border: 2px solid;
-    background: transparent;
-    transition: all 0.15s;
-    letter-spacing: 1px;
-    text-align: center;
+    display: block; width: 100%; padding: 10px;
+    font-family: 'Press Start 2P', monospace; font-size: 8px;
+    cursor: pointer; border: 2px solid; background: transparent;
+    transition: all .15s; letter-spacing: 1px; text-align: center;
   }
-  .btn-gold {
-    color: var(--border);
-    border-color: var(--border);
-  }
-  .btn-gold:hover {
-    background: var(--border);
-    color: #000;
-    box-shadow: 0 0 15px rgba(255,215,0,0.5);
-  }
-  .btn-green {
-    color: var(--green);
-    border-color: var(--green);
-    margin-top: 8px;
-  }
-  .btn-green:hover {
-    background: var(--green);
-    color: #000;
-  }
-  .btn-red {
-    color: var(--red);
-    border-color: var(--red);
-    margin-top: 8px;
-  }
+  .btn-gold  { color: var(--border); border-color: var(--border); }
+  .btn-gold:hover  { background: var(--border); color: #000; box-shadow: 0 0 14px rgba(255,215,0,.5); }
+  .btn-green { color: var(--green); border-color: var(--green); margin-top: 7px; }
+  .btn-green:hover { background: var(--green); color: #000; }
+  .btn-red   { color: var(--red); border-color: var(--red); margin-top: 7px; }
   .btn-red:hover { background: var(--red); color: #fff; }
 
-  /* ── GAME SCREEN ── */
+  /* ── GAME SCREEN ────────────────────────────────────────── */
   #gameScreen {
     flex-direction: row;
     align-items: flex-start;
     justify-content: center;
-    padding: 16px;
-    gap: 16px;
-    min-height: 100vh;
+    padding: 10px;
+    gap: 12px;
+    height: 100vh;
+    overflow: hidden;
   }
 
   #gameCanvas {
     display: block;
     border: 3px solid var(--border2);
-    box-shadow: 0 0 20px rgba(255,215,0,0.15);
+    box-shadow: 0 0 18px rgba(255,215,0,.15);
     image-rendering: pixelated;
     flex-shrink: 0;
+    touch-action: none;
   }
 
   .game-sidebar {
-    width: 200px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-    flex-shrink: 0;
+    width: 190px; flex-shrink: 0;
+    display: flex; flex-direction: column; gap: 10px;
+    overflow-y: auto; max-height: 100vh;
   }
-
   .sidebar-section {
-    background: var(--panel);
-    border: 1px solid var(--border2);
-    padding: 12px;
+    background: var(--panel); border: 1px solid var(--border2); padding: 10px;
   }
-  .sidebar-section h3 {
-    font-size: 7px;
-    color: var(--border);
-    margin-bottom: 10px;
-    letter-spacing: 2px;
-  }
+  .sidebar-section h3 { font-size: 7px; color: var(--border); margin-bottom: 8px; letter-spacing: 1px; }
 
-  .player-hud {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-  .player-row {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 6px;
-    color: var(--text2);
-  }
-  .player-color-dot {
-    width: 8px; height: 8px;
-    border-radius: 0;
-    flex-shrink: 0;
-  }
+  .player-hud { display: flex; flex-direction: column; gap: 5px; }
+  .player-row { display: flex; align-items: center; gap: 5px; font-size: 6px; color: var(--text2); }
+  .player-color-dot { width: 8px; height: 8px; flex-shrink: 0; }
   .player-lives { color: var(--red); }
   .player-score { color: var(--green); margin-left: auto; }
 
-  .enemy-counter {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-  }
-  .enemy-icon {
-    width: 8px; height: 8px;
-    background: var(--red);
-    clip-path: polygon(50% 0%, 0% 100%, 100% 100%);
-  }
+  .enemy-counter { display: flex; flex-wrap: wrap; gap: 3px; }
+  .enemy-icon { width: 8px; height: 8px; background: var(--red); clip-path: polygon(50% 0%,0% 100%,100% 100%); }
 
-  /* Chat */
   #chatMessages {
-    height: 120px;
-    overflow-y: auto;
-    font-size: 6px;
-    color: #aaa;
-    margin-bottom: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
+    height: 100px; overflow-y: auto; font-size: 6px; color: #aaa;
+    margin-bottom: 6px; display: flex; flex-direction: column; gap: 3px;
   }
   #chatMessages::-webkit-scrollbar { width: 3px; }
   #chatMessages::-webkit-scrollbar-thumb { background: #444; }
   .chat-msg { word-break: break-word; }
   .chat-msg .chat-name { color: var(--border); }
-  .chat-msg.system { color: #555; font-style: italic; }
+  .chat-msg.system { color: #555; }
+  #chatInput { font-size: 7px; padding: 5px; }
+  .controls-help { font-size: 6px; color: #555; line-height: 2; }
 
-  #chatInput {
-    font-size: 7px;
-    padding: 6px;
+  /* ── MOBILE CONTROLS ────────────────────────────────────── */
+  #mobileControls {
+    display: none; /* shown by JS on mobile */
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 185px;
+    background: rgba(0,0,0,0.75);
+    border-top: 1px solid #333;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 30px;
+    z-index: 200;
+    touch-action: none;
   }
 
-  /* Controls help */
-  .controls-help { font-size: 6px; color: #555; line-height: 1.8; }
+  /* Joystick */
+  #joystickZone {
+    width: 130px; height: 130px;
+    position: relative;
+    touch-action: none;
+  }
 
-  /* Game overlay */
+  /* D-pad cross underneath knob */
+  .dpad {
+    position: absolute; inset: 0;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    gap: 3px;
+  }
+  .dpad-btn {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,215,0,0.15);
+    border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; color: rgba(255,215,0,0.3);
+    transition: background .1s, color .1s;
+  }
+  .dpad-btn.corner { background: transparent; border: none; }
+  .dpad-btn.lit { background: rgba(255,215,0,0.25); color: rgba(255,215,0,0.9); }
+
+  /* Joystick base & knob */
+  .joystick-base {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    border: 2px solid rgba(255,215,0,0.2);
+    background: radial-gradient(circle, rgba(255,215,0,0.05), transparent 70%);
+    pointer-events: none;
+  }
+  #joystickKnob {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 48px; height: 48px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FFD700, #8B6914);
+    border: 2px solid #FFD700;
+    box-shadow: 0 0 10px rgba(255,215,0,0.4);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    transition: box-shadow .1s;
+  }
+
+  /* Fire button */
+  #fireBtn {
+    width: 100px; height: 100px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #FF6B2B, #8B1A00);
+    border: 3px solid #FF4444;
+    box-shadow: 0 0 20px rgba(255,68,68,0.4);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px; color: #fff;
+    touch-action: none;
+    transition: all .08s;
+    letter-spacing: 1px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  #fireBtn .fire-icon { font-size: 22px; line-height: 1; margin-bottom: 4px; }
+  #fireBtn.pressed {
+    transform: scale(0.92);
+    background: radial-gradient(circle at 35% 35%, #FF4444, #CC0000);
+    box-shadow: 0 0 30px rgba(255,68,68,0.7);
+  }
+
+  /* Mobile: hide sidebar, stack canvas + controls */
+  @media (max-width: 767px) {
+    #gameScreen {
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding: 6px 6px 0;
+      gap: 0;
+    }
+    .game-sidebar { display: none; }
+    #gameCanvas { margin: 0 auto; }
+  }
+
+  /* ── GAME OVER OVERLAY ──────────────────────────────────── */
   #gameOverlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    flex-direction: column;
-    gap: 20px;
+    display: none; position: fixed; inset: 0;
+    background: rgba(0,0,0,.87); z-index: 300;
+    align-items: center; justify-content: center; flex-direction: column; gap: 18px;
   }
   #gameOverlay.show { display: flex; }
-  #overlayTitle {
-    font-size: clamp(16px, 4vw, 32px);
-    text-align: center;
-    animation: blink 0.8s infinite;
-  }
-  #overlayTitle.win { color: var(--green); text-shadow: 0 0 20px var(--green); }
-  #overlayTitle.lose { color: var(--red); text-shadow: 0 0 20px var(--red); }
+  #overlayTitle { font-size: clamp(14px,4vw,28px); text-align: center; animation: blink .8s infinite; }
+  #overlayTitle.win  { color: var(--green); text-shadow: 0 0 20px var(--green); }
+  #overlayTitle.lose { color: var(--red);   text-shadow: 0 0 20px var(--red);   }
+  @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
 
-  @keyframes blink { 0%,49% { opacity: 1; } 50%,100% { opacity: 0; } }
+  #pingDisplay { position: fixed; top: 6px; right: 6px; font-size: 7px; color: #333; z-index: 50; }
 
-  .tanks-animation {
-    display: flex;
-    gap: 20px;
-    margin: 10px 0;
-  }
-  .tank-icon { font-size: 32px; animation: tankBounce 0.5s infinite alternate; }
-  @keyframes tankBounce { from { transform: translateY(0); } to { transform: translateY(-6px); } }
-
-  /* Ping */
-  #pingDisplay {
-    position: fixed;
-    top: 8px;
-    right: 8px;
-    font-size: 7px;
-    color: #444;
-    z-index: 50;
-  }
-
-  @media (max-width: 720px) {
+  /* Lobby responsive */
+  @media (max-width: 680px) {
     .lobby-layout { grid-template-columns: 1fr; }
-    #gameScreen { flex-direction: column; align-items: center; }
-    .game-sidebar { width: 100%; flex-direction: row; flex-wrap: wrap; }
-    .sidebar-section { flex: 1; min-width: 150px; }
+    body { overflow-y: auto; }
+    #lobbyScreen { overflow-y: auto; touch-action: pan-y; }
   }
 </style>
 </head>
 <body>
 
-<!-- ── LOBBY SCREEN ── -->
+<!-- ── LOBBY ─────────────────────────────────────────────── -->
 <div id="lobbyScreen" class="screen active">
   <div class="logo">
     <h1>⚔ BATTLE CITY ONLINE ⚔</h1>
@@ -358,16 +306,13 @@
   </div>
 
   <div class="lobby-layout">
-    <!-- Room list -->
     <div>
       <div class="panel glow" data-title="SERVER BROWSER" style="margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <span style="font-size:7px;color:#888">SELECT A ROOM TO JOIN</span>
-          <button class="btn btn-gold" style="width:auto;padding:6px 12px;font-size:7px" onclick="refreshRooms()">↻ REFRESH</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:7px;color:#888">SELECT A ROOM</span>
+          <button class="btn btn-gold" style="width:auto;padding:5px 10px;font-size:7px" onclick="refreshRooms()">↻ REFRESH</button>
         </div>
-        <div id="roomList">
-          <div style="font-size:7px;color:#444;text-align:center;padding:20px">LOADING ROOMS...</div>
-        </div>
+        <div id="roomList"><div style="font-size:7px;color:#444;text-align:center;padding:20px">LOADING...</div></div>
       </div>
 
       <div class="panel" data-title="YOUR CALLSIGN">
@@ -379,7 +324,6 @@
       </div>
     </div>
 
-    <!-- Create room -->
     <div>
       <div class="panel" data-title="CREATE ROOM" style="margin-bottom:12px">
         <div class="form-group">
@@ -388,39 +332,27 @@
         </div>
         <div class="form-group">
           <label>MAP</label>
-          <select id="mapSelect">
-            <option value="0">Classic</option>
-            <option value="1">Fortress</option>
-          </select>
+          <select id="mapSelect"><option value="0">Classic</option><option value="1">Fortress</option></select>
         </div>
         <button class="btn btn-gold" onclick="createRoom()">✚ CREATE ROOM</button>
       </div>
 
       <div class="panel" data-title="HOW TO PLAY">
         <div class="controls-help">
-          WASD / ARROWS → MOVE<br><br>
-          SPACE / ENTER → FIRE<br><br>
-          DESTROY ALL ENEMY<br>
-          TANKS TO WIN!<br><br>
-          PROTECT YOUR BASE<br>
-          FROM ENEMIES!
-        </div>
-      </div>
-
-      <div class="panel" data-title="LEGEND" style="margin-top:12px">
-        <div style="display:flex;flex-direction:column;gap:6px;font-size:6px;color:#aaa">
-          <span>🟫 BRICK — DESTROYABLE</span>
-          <span>⬜ STEEL — INDESTRUCTIBLE</span>
-          <span>🦅 EAGLE — PROTECT IT!</span>
+          📱 MOBILE: USE JOYSTICK<br>
+          ⌨ PC: WASD / ARROWS<br>
+          🔥 FIRE: RED BUTTON<br><br>
+          DESTROY ALL ENEMIES!<br>
+          PROTECT THE EAGLE!
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ── GAME SCREEN ── -->
+<!-- ── GAME SCREEN ───────────────────────────────────────── -->
 <div id="gameScreen" class="screen">
-  <div id="pingDisplay">PING: --ms</div>
+  <div id="pingDisplay">--ms</div>
 
   <canvas id="gameCanvas" width="416" height="416"></canvas>
 
@@ -429,44 +361,62 @@
       <h3>▶ PLAYERS</h3>
       <div class="player-hud" id="playerHud"></div>
     </div>
-
     <div class="sidebar-section">
       <h3>⚠ ENEMIES</h3>
       <div class="enemy-counter" id="enemyCounter"></div>
-      <div id="enemiesLeft" style="font-size:6px;color:#888;margin-top:8px"></div>
+      <div id="enemiesLeft" style="font-size:6px;color:#888;margin-top:7px"></div>
     </div>
-
     <div class="sidebar-section">
       <h3>💬 CHAT</h3>
       <div id="chatMessages"></div>
-      <input type="text" id="chatInput" placeholder="PRESS ENTER..." maxlength="60"
+      <input type="text" id="chatInput" placeholder="ENTER TO SEND..." maxlength="60"
         onkeydown="if(event.key==='Enter') sendChat()">
     </div>
-
     <div class="sidebar-section">
-      <h3>🎮 CONTROLS</h3>
-      <div class="controls-help">
-        WASD/ARROWS — MOVE<br>
-        SPACE/ENTER — FIRE<br><br>
-        <span style="color:#555">ESC — LEAVE ROOM</span>
-      </div>
+      <div class="controls-help">WASD / ARROWS — MOVE<br>SPACE — FIRE<br>ESC — LEAVE</div>
     </div>
-
-    <button class="btn btn-red" onclick="leaveGame()" style="width:100%">✕ LEAVE</button>
+    <button class="btn btn-red" onclick="leaveGame()">✕ LEAVE</button>
   </div>
 </div>
 
-<!-- Game Over Overlay -->
+<!-- ── MOBILE CONTROLS ──────────────────────────────────── -->
+<div id="mobileControls">
+  <!-- Virtual joystick -->
+  <div id="joystickZone">
+    <div class="dpad">
+      <div class="dpad-btn corner"></div>
+      <div class="dpad-btn" id="dpad_up">▲</div>
+      <div class="dpad-btn corner"></div>
+      <div class="dpad-btn" id="dpad_left">◀</div>
+      <div class="dpad-btn" style="background:rgba(255,215,0,0.04)"></div>
+      <div class="dpad-btn" id="dpad_right">▶</div>
+      <div class="dpad-btn corner"></div>
+      <div class="dpad-btn" id="dpad_down">▼</div>
+      <div class="dpad-btn corner"></div>
+    </div>
+    <div class="joystick-base"></div>
+    <div id="joystickKnob"></div>
+  </div>
+
+  <!-- Center info (mini HUD for mobile) -->
+  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
+    <div id="mobileHudPlayers" style="font-size:6px;color:#aaa;text-align:center;max-width:90px"></div>
+    <button class="btn btn-red" onclick="leaveGame()" style="width:80px;padding:6px;font-size:6px;margin:0">✕ LEAVE</button>
+  </div>
+
+  <!-- Fire button -->
+  <div id="fireBtn">
+    <div class="fire-icon">🔥</div>
+    FIRE
+  </div>
+</div>
+
+<!-- ── GAME OVER ─────────────────────────────────────────── -->
 <div id="gameOverlay">
   <div id="overlayTitle"></div>
-  <div class="tanks-animation">
-    <div class="tank-icon">🛡</div>
-    <div class="tank-icon" style="animation-delay:0.25s">⚔</div>
-    <div class="tank-icon" style="animation-delay:0.5s">🛡</div>
-  </div>
-  <div id="overlayScore" style="font-size:9px;color:#aaa"></div>
+  <div id="overlayScore" style="font-size:8px;color:#aaa;text-align:center;padding:0 20px"></div>
   <button class="btn btn-green" style="width:200px" onclick="requestRestart()">↺ PLAY AGAIN</button>
-  <button class="btn btn-red" style="width:200px" onclick="leaveGame()">⬅ LOBBY</button>
+  <button class="btn btn-red"   style="width:200px" onclick="leaveGame()">⬅ LOBBY</button>
 </div>
 
 <script src="/socket.io/socket.io.js"></script>
