@@ -8,390 +8,223 @@
 <title>BATTLE CITY ONLINE</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
-
   :root {
-    --bg: #0a0a0f;
-    --panel: #111118;
-    --border: #FFD700;
-    --border2: #8B6914;
-    --text: #FFD700;
-    --text2: #FFF8DC;
-    --red: #FF4444;
-    --green: #44FF88;
-    --blue: #44AAFF;
-    --scanline: rgba(0,0,0,0.12);
-    /* iPhone notch / Dynamic Island safe areas */
-    --sat: env(safe-area-inset-top, 0px);
-    --sab: env(safe-area-inset-bottom, 0px);
-    --sal: env(safe-area-inset-left, 0px);
-    --sar: env(safe-area-inset-right, 0px);
-    --ctrl-h: 190px;
+    --bg:#0a0a0f; --panel:#111118; --border:#FFD700; --border2:#8B6914;
+    --text:#FFD700; --text2:#FFF8DC; --red:#FF4444; --green:#44FF88; --blue:#44AAFF;
+    --purple:#CC44FF; --orange:#FF8C00;
+    --scanline:rgba(0,0,0,0.12);
+    --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
+    --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
+    --ctrl-h:190px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+  body{background:var(--bg);color:var(--text);font-family:'Press Start 2P',monospace;
+    min-height:100vh;overflow:hidden;touch-action:none;user-select:none;}
+  body::after{content:'';position:fixed;inset:0;
+    background:repeating-linear-gradient(0deg,transparent,transparent 2px,var(--scanline) 2px,var(--scanline) 4px);
+    pointer-events:none;z-index:9999;}
+  .screen{display:none;} .screen.active{display:flex;}
+
+  /* ── LOBBY ── */
+  #lobbyScreen{flex-direction:column;align-items:center;padding:16px;
+    min-height:100vh;overflow-y:auto;touch-action:pan-y;}
+  .logo{margin:12px 0 8px;text-align:center;animation:flicker 3s infinite;}
+  .logo h1{font-size:clamp(10px,2.8vw,20px);color:var(--border);
+    text-shadow:0 0 10px #FFD700,0 0 30px #FF8C00;letter-spacing:3px;}
+  .logo .sub{font-size:7px;color:#888;margin-top:6px;letter-spacing:4px;}
+  @keyframes flicker{0%,95%,100%{opacity:1}96%{opacity:.8}97%{opacity:1}98%{opacity:.6}99%{opacity:1}}
+
+  .lobby-layout{display:grid;grid-template-columns:1fr 260px;gap:14px;
+    width:100%;max-width:880px;margin-top:14px;}
+  .panel{background:var(--panel);border:2px solid var(--border2);padding:14px;position:relative;}
+  .panel::before{content:attr(data-title);position:absolute;top:-9px;left:10px;
+    background:var(--panel);padding:0 6px;font-size:7px;color:var(--border);letter-spacing:2px;}
+  .panel.glow{border-color:var(--border);box-shadow:0 0 14px rgba(255,215,0,.2);}
+
+  #roomList{display:flex;flex-direction:column;gap:7px;max-height:320px;overflow-y:auto;}
+  #roomList::-webkit-scrollbar{width:5px;}
+  #roomList::-webkit-scrollbar-thumb{background:var(--border2);}
+
+  .room-item{display:grid;grid-template-columns:1fr auto auto auto auto;
+    gap:5px;align-items:center;padding:9px 10px;border:1px solid #333;
+    background:#0d0d14;cursor:pointer;font-size:7px;transition:all .15s;}
+  .room-item:hover,.room-item.selected{border-color:var(--border);background:#1a1a22;}
+  .room-name{color:var(--text2);font-size:8px;}
+  .room-players{color:var(--green);}
+  .room-status{padding:2px 5px;font-size:6px;border:1px solid;}
+  .room-status.waiting{color:var(--green);border-color:var(--green);}
+  .room-status.playing{color:var(--blue);border-color:var(--blue);}
+  .room-status.finished{color:var(--red);border-color:var(--red);}
+  /* Mode badge */
+  .mode-badge{padding:2px 5px;font-size:6px;border:1px solid;letter-spacing:0;}
+  .mode-badge.coop{color:#44FF88;border-color:#44FF88;}
+  .mode-badge.deathmatch{color:#FF4444;border-color:#FF4444;}
+  .mode-badge.deathmatch_bots{color:#FF8C00;border-color:#FF8C00;}
+
+  .form-group{margin-bottom:10px;}
+  .form-group label{display:block;font-size:7px;color:#888;margin-bottom:5px;}
+  input[type="text"],select{width:100%;background:#0d0d14;border:1px solid #444;
+    color:var(--text2);font-family:'Press Start 2P',monospace;font-size:8px;padding:8px;outline:none;}
+  input[type="text"]:focus,select:focus{border-color:var(--border);}
+  select option{background:#111;}
+
+  .btn{display:block;width:100%;padding:10px;font-family:'Press Start 2P',monospace;
+    font-size:8px;cursor:pointer;border:2px solid;background:transparent;
+    transition:all .15s;letter-spacing:1px;text-align:center;}
+  .btn-gold{color:var(--border);border-color:var(--border);}
+  .btn-gold:hover{background:var(--border);color:#000;box-shadow:0 0 14px rgba(255,215,0,.5);}
+  .btn-green{color:var(--green);border-color:var(--green);margin-top:7px;}
+  .btn-green:hover{background:var(--green);color:#000;}
+  .btn-red{color:var(--red);border-color:var(--red);margin-top:7px;}
+  .btn-red:hover{background:var(--red);color:#fff;}
+
+  /* ── GAME SCREEN ── */
+  #gameScreen{flex-direction:row;align-items:flex-start;justify-content:center;
+    padding:10px;gap:12px;height:100vh;overflow:hidden;}
+  #gameCanvas{display:block;border:3px solid var(--border2);
+    box-shadow:0 0 18px rgba(255,215,0,.15);image-rendering:pixelated;
+    flex-shrink:0;touch-action:none;}
+
+  .game-sidebar{width:195px;flex-shrink:0;display:flex;flex-direction:column;
+    gap:10px;overflow-y:auto;max-height:100vh;}
+  .sidebar-section{background:var(--panel);border:1px solid var(--border2);padding:10px;}
+  .sidebar-section h3{font-size:7px;color:var(--border);margin-bottom:8px;letter-spacing:1px;}
+
+  /* Mode label in game */
+  #gameModeLabel{font-size:7px;padding:4px 8px;text-align:center;margin-bottom:2px;letter-spacing:1px;}
+  #gameModeLabel.coop{color:#44FF88;border:1px solid #44FF88;}
+  #gameModeLabel.deathmatch{color:#FF4444;border:1px solid #FF4444;}
+  #gameModeLabel.deathmatch_bots{color:#FF8C00;border:1px solid #FF8C00;}
+
+  /* Scoreboard (coop) */
+  .player-hud{display:flex;flex-direction:column;gap:5px;}
+  .player-row{display:flex;align-items:center;gap:5px;font-size:6px;color:var(--text2);}
+  .player-color-dot{width:8px;height:8px;flex-shrink:0;}
+  .player-lives{color:var(--red);}
+  .player-score{color:var(--green);margin-left:auto;}
+
+  /* Scoreboard (DM) */
+  .dm-table{width:100%;border-collapse:collapse;font-size:6px;}
+  .dm-table th{color:var(--border);font-size:5px;padding:2px 3px;
+    border-bottom:1px solid #333;text-align:left;}
+  .dm-table td{padding:3px 3px;color:var(--text2);border-bottom:1px solid #1a1a1a;}
+  .dm-table .frag-col{color:var(--green);text-align:right;}
+  .dm-table .death-col{color:var(--red);text-align:right;}
+  .dm-table .bot-row td{color:#888;}
+  .dm-frag-limit{font-size:6px;color:#555;margin-top:5px;}
+
+  .enemy-counter{display:flex;flex-wrap:wrap;gap:3px;}
+  .enemy-icon{width:8px;height:8px;background:var(--red);clip-path:polygon(50% 0%,0% 100%,100% 100%);}
+
+  #chatMessages{height:100px;overflow-y:auto;font-size:6px;color:#aaa;
+    margin-bottom:6px;display:flex;flex-direction:column;gap:3px;}
+  #chatMessages::-webkit-scrollbar{width:3px;}
+  #chatMessages::-webkit-scrollbar-thumb{background:#444;}
+  .chat-msg{word-break:break-word;} .chat-msg .chat-name{color:var(--border);}
+  .chat-msg.system{color:#555;}
+  #chatInput{font-size:7px;padding:5px;}
+  .controls-help{font-size:6px;color:#555;line-height:2;}
+
+  /* ── MOBILE CONTROLS ── */
+  #mobileControls{display:none;position:fixed;bottom:0;left:0;right:0;
+    height:calc(var(--ctrl-h) + var(--sab));padding-bottom:var(--sab);
+    background:rgba(8,8,14,.93);border-top:1px solid #2a2a3a;
+    align-items:center;justify-content:space-between;
+    padding-left:calc(20px + var(--sal));padding-right:calc(20px + var(--sar));
+    z-index:200;touch-action:none;backdrop-filter:blur(6px);}
+  #joystickZone{width:130px;height:130px;position:relative;touch-action:none;}
+  .dpad{position:absolute;inset:0;display:grid;
+    grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;gap:3px;}
+  .dpad-btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,215,0,.15);
+    border-radius:4px;display:flex;align-items:center;justify-content:center;
+    font-size:10px;color:rgba(255,215,0,.3);transition:background .1s,color .1s;}
+  .dpad-btn.corner{background:transparent;border:none;}
+  .dpad-btn.lit{background:rgba(255,215,0,.25);color:rgba(255,215,0,.9);}
+  .joystick-base{position:absolute;inset:0;border-radius:50%;
+    border:2px solid rgba(255,215,0,.2);
+    background:radial-gradient(circle,rgba(255,215,0,.05),transparent 70%);pointer-events:none;}
+  #joystickKnob{position:absolute;top:50%;left:50%;width:48px;height:48px;
+    border-radius:50%;background:radial-gradient(circle at 35% 35%,#FFD700,#8B6914);
+    border:2px solid #FFD700;box-shadow:0 0 10px rgba(255,215,0,.4);
+    transform:translate(-50%,-50%);pointer-events:none;}
+
+  #mobileHud{flex:1;margin:0 12px;height:160px;display:flex;flex-direction:column;gap:5px;overflow:hidden;}
+  .mob-hud-row{display:flex;gap:6px;}
+  .mob-hud-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,215,0,.15);
+    padding:5px 6px;flex:1;min-width:0;overflow:hidden;}
+  .mob-hud-box h4{font-size:5px;color:var(--border);margin-bottom:3px;letter-spacing:1px;}
+  /* mobile dm table */
+  .mob-dm-table{width:100%;border-collapse:collapse;font-size:5px;}
+  .mob-dm-table th{color:var(--border);font-size:4px;padding:1px 2px;border-bottom:1px solid #333;}
+  .mob-dm-table td{padding:2px 2px;color:var(--text2);}
+  .mob-dm-table .frag-col{color:var(--green);text-align:right;}
+  .mob-dm-table .death-col{color:var(--red);text-align:right;}
+  .mob-dm-table .bot-row td{color:#666;}
+  /* mobile coop */
+  #mobPlayerHud{display:flex;flex-direction:column;gap:3px;}
+  .mob-player-row{display:flex;align-items:center;gap:4px;font-size:5px;color:var(--text2);}
+  .mob-color-dot{width:6px;height:6px;flex-shrink:0;}
+  .mob-lives{color:var(--red);}  .mob-score{color:var(--green);margin-left:auto;}
+  #mobEnemyRow{display:flex;flex-wrap:wrap;gap:2px;}
+  .mob-enemy-icon{width:6px;height:6px;background:var(--red);clip-path:polygon(50% 0%,0% 100%,100% 100%);}
+  #mobEnemiesLeft{font-size:5px;color:#888;margin-top:2px;}
+  #mobChatMessages{height:44px;overflow-y:auto;display:flex;flex-direction:column;
+    gap:2px;font-size:5px;color:#888;}
+  #mobChatMessages .chat-name{color:var(--border);}
+  #mobChatMessages::-webkit-scrollbar{display:none;}
+  #mobChatInput{width:100%;background:rgba(255,255,255,.05);border:1px solid #333;
+    color:var(--text2);font-family:'Press Start 2P',monospace;font-size:5px;
+    padding:4px 5px;outline:none;margin-top:3px;}
+
+  #fireBtn{width:100px;height:100px;border-radius:50%;
+    background:radial-gradient(circle at 35% 35%,#FF6B2B,#8B1A00);
+    border:3px solid #FF4444;box-shadow:0 0 20px rgba(255,68,68,.4);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'Press Start 2P',monospace;font-size:9px;color:#fff;
+    touch-action:none;transition:all .08s;letter-spacing:1px;
+    text-shadow:0 1px 3px rgba(0,0,0,.8);}
+  #fireBtn .fire-icon{font-size:22px;line-height:1;margin-bottom:4px;}
+  #fireBtn.pressed{transform:scale(.92);
+    background:radial-gradient(circle at 35% 35%,#FF4444,#CC0000);
+    box-shadow:0 0 30px rgba(255,68,68,.7);}
+
+  @media(max-width:767px){
+    #gameScreen{flex-direction:column;align-items:center;justify-content:flex-start;
+      padding-top:calc(var(--sat) + 8px);
+      padding-left:calc(var(--sal) + 6px);padding-right:calc(var(--sar) + 6px);
+      padding-bottom:0;gap:0;}
+    .game-sidebar{display:none;}
+    #gameCanvas{margin:0 auto;}
   }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  /* ── GAME OVER ── */
+  #gameOverlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.87);
+    z-index:300;align-items:center;justify-content:center;flex-direction:column;gap:18px;}
+  #gameOverlay.show{display:flex;}
+  #overlayTitle{font-size:clamp(14px,4vw,28px);text-align:center;animation:blink .8s infinite;}
+  #overlayTitle.win{color:var(--green);text-shadow:0 0 20px var(--green);}
+  #overlayTitle.lose{color:var(--red);text-shadow:0 0 20px var(--red);}
+  #overlayTitle.dm{color:var(--orange);text-shadow:0 0 20px var(--orange);}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  #overlayScore{font-size:7px;color:#aaa;text-align:center;padding:0 20px;line-height:2;}
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Press Start 2P', monospace;
-    min-height: 100vh;
-    overflow: hidden;
-    touch-action: none;
-    user-select: none;
-  }
-  body::after {
-    content: '';
-    position: fixed; inset: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, var(--scanline) 2px, var(--scanline) 4px);
-    pointer-events: none; z-index: 9999;
-  }
+  #pingDisplay{position:fixed;top:6px;right:6px;font-size:7px;color:#333;z-index:50;}
 
-  .screen { display: none; }
-  .screen.active { display: flex; }
-
-  /* ── LOBBY ─────────────────────────────────────────────── */
-  #lobbyScreen {
-    flex-direction: column;
-    align-items: center;
-    padding: 16px;
-    min-height: 100vh;
-    overflow-y: auto;
-    touch-action: pan-y;
-  }
-
-  .logo { margin: 12px 0 8px; text-align: center; animation: flicker 3s infinite; }
-  .logo h1 { font-size: clamp(10px, 2.8vw, 20px); color: var(--border); text-shadow: 0 0 10px #FFD700, 0 0 30px #FF8C00; letter-spacing: 3px; }
-  .logo .sub { font-size: 7px; color: #888; margin-top: 6px; letter-spacing: 4px; }
-
-  @keyframes flicker { 0%,95%,100%{opacity:1} 96%{opacity:.8} 97%{opacity:1} 98%{opacity:.6} 99%{opacity:1} }
-
-  .lobby-layout {
-    display: grid;
-    grid-template-columns: 1fr 260px;
-    gap: 14px;
-    width: 100%;
-    max-width: 860px;
-    margin-top: 14px;
-  }
-
-  .panel {
-    background: var(--panel);
-    border: 2px solid var(--border2);
-    padding: 14px;
-    position: relative;
-  }
-  .panel::before {
-    content: attr(data-title);
-    position: absolute; top: -9px; left: 10px;
-    background: var(--panel); padding: 0 6px;
-    font-size: 7px; color: var(--border); letter-spacing: 2px;
-  }
-  .panel.glow { border-color: var(--border); box-shadow: 0 0 14px rgba(255,215,0,0.2); }
-
-  #roomList { display: flex; flex-direction: column; gap: 7px; max-height: 300px; overflow-y: auto; }
-  #roomList::-webkit-scrollbar { width: 5px; }
-  #roomList::-webkit-scrollbar-thumb { background: var(--border2); }
-
-  .room-item {
-    display: grid; grid-template-columns: 1fr auto auto auto;
-    gap: 6px; align-items: center;
-    padding: 9px 10px; border: 1px solid #333;
-    background: #0d0d14; cursor: pointer; font-size: 7px;
-    transition: all .15s;
-  }
-  .room-item:hover, .room-item.selected { border-color: var(--border); background: #1a1a22; }
-  .room-name { color: var(--text2); font-size: 8px; }
-  .room-map { color: #888; }
-  .room-players { color: var(--green); }
-  .room-status { padding: 2px 5px; font-size: 6px; border: 1px solid; }
-  .room-status.waiting  { color: var(--green); border-color: var(--green); }
-  .room-status.playing  { color: var(--blue);  border-color: var(--blue);  }
-  .room-status.finished { color: var(--red);   border-color: var(--red);   }
-
-  .form-group { margin-bottom: 10px; }
-  .form-group label { display: block; font-size: 7px; color: #888; margin-bottom: 5px; }
-
-  input[type="text"], select {
-    width: 100%; background: #0d0d14; border: 1px solid #444;
-    color: var(--text2); font-family: 'Press Start 2P', monospace;
-    font-size: 8px; padding: 8px; outline: none;
-  }
-  input[type="text"]:focus, select:focus { border-color: var(--border); }
-  select option { background: #111; }
-
-  .btn {
-    display: block; width: 100%; padding: 10px;
-    font-family: 'Press Start 2P', monospace; font-size: 8px;
-    cursor: pointer; border: 2px solid; background: transparent;
-    transition: all .15s; letter-spacing: 1px; text-align: center;
-  }
-  .btn-gold  { color: var(--border); border-color: var(--border); }
-  .btn-gold:hover  { background: var(--border); color: #000; box-shadow: 0 0 14px rgba(255,215,0,.5); }
-  .btn-green { color: var(--green); border-color: var(--green); margin-top: 7px; }
-  .btn-green:hover { background: var(--green); color: #000; }
-  .btn-red   { color: var(--red); border-color: var(--red); margin-top: 7px; }
-  .btn-red:hover { background: var(--red); color: #fff; }
-
-  /* ── GAME SCREEN ────────────────────────────────────────── */
-  #gameScreen {
-    flex-direction: row;
-    align-items: flex-start;
-    justify-content: center;
-    padding: 10px;
-    gap: 12px;
-    height: 100vh;
-    overflow: hidden;
-  }
-
-  #gameCanvas {
-    display: block;
-    border: 3px solid var(--border2);
-    box-shadow: 0 0 18px rgba(255,215,0,.15);
-    image-rendering: pixelated;
-    flex-shrink: 0;
-    touch-action: none;
-  }
-
-  .game-sidebar {
-    width: 190px; flex-shrink: 0;
-    display: flex; flex-direction: column; gap: 10px;
-    overflow-y: auto; max-height: 100vh;
-  }
-  .sidebar-section {
-    background: var(--panel); border: 1px solid var(--border2); padding: 10px;
-  }
-  .sidebar-section h3 { font-size: 7px; color: var(--border); margin-bottom: 8px; letter-spacing: 1px; }
-
-  .player-hud { display: flex; flex-direction: column; gap: 5px; }
-  .player-row { display: flex; align-items: center; gap: 5px; font-size: 6px; color: var(--text2); }
-  .player-color-dot { width: 8px; height: 8px; flex-shrink: 0; }
-  .player-lives { color: var(--red); }
-  .player-score { color: var(--green); margin-left: auto; }
-
-  .enemy-counter { display: flex; flex-wrap: wrap; gap: 3px; }
-  .enemy-icon { width: 8px; height: 8px; background: var(--red); clip-path: polygon(50% 0%,0% 100%,100% 100%); }
-
-  #chatMessages {
-    height: 100px; overflow-y: auto; font-size: 6px; color: #aaa;
-    margin-bottom: 6px; display: flex; flex-direction: column; gap: 3px;
-  }
-  #chatMessages::-webkit-scrollbar { width: 3px; }
-  #chatMessages::-webkit-scrollbar-thumb { background: #444; }
-  .chat-msg { word-break: break-word; }
-  .chat-msg .chat-name { color: var(--border); }
-  .chat-msg.system { color: #555; }
-  #chatInput { font-size: 7px; padding: 5px; }
-  .controls-help { font-size: 6px; color: #555; line-height: 2; }
-
-  /* ── MOBILE CONTROLS ────────────────────────────────────── */
-  #mobileControls {
-    display: none; /* shown by JS on mobile */
-    position: fixed;
-    bottom: 0; left: 0; right: 0;
-    /* expand height to absorb home-bar safe area */
-    height: calc(var(--ctrl-h) + var(--sab));
-    padding-bottom: var(--sab);
-    background: rgba(8,8,14,0.92);
-    border-top: 1px solid #2a2a3a;
-    align-items: center;
-    justify-content: space-between;
-    padding-left:  calc(20px + var(--sal));
-    padding-right: calc(20px + var(--sar));
-    z-index: 200;
-    touch-action: none;
-    backdrop-filter: blur(6px);
-  }
-
-  /* Joystick */
-  #joystickZone {
-    width: 130px; height: 130px;
-    position: relative;
-    touch-action: none;
-  }
-
-  /* D-pad cross underneath knob */
-  .dpad {
-    position: absolute; inset: 0;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
-    gap: 3px;
-  }
-  .dpad-btn {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,215,0,0.15);
-    border-radius: 4px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; color: rgba(255,215,0,0.3);
-    transition: background .1s, color .1s;
-  }
-  .dpad-btn.corner { background: transparent; border: none; }
-  .dpad-btn.lit { background: rgba(255,215,0,0.25); color: rgba(255,215,0,0.9); }
-
-  /* Joystick base & knob */
-  .joystick-base {
-    position: absolute; inset: 0;
-    border-radius: 50%;
-    border: 2px solid rgba(255,215,0,0.2);
-    background: radial-gradient(circle, rgba(255,215,0,0.05), transparent 70%);
-    pointer-events: none;
-  }
-  #joystickKnob {
-    position: absolute;
-    top: 50%; left: 50%;
-    width: 48px; height: 48px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #FFD700, #8B6914);
-    border: 2px solid #FFD700;
-    box-shadow: 0 0 10px rgba(255,215,0,0.4);
-    transform: translate(-50%, -50%);
-    pointer-events: none;
-    transition: box-shadow .1s;
-  }
-
-  /* Mini HUD in mobile controls center */
-  #mobileHud {
-    flex: 1;
-    margin: 0 14px;
-    height: 160px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    overflow: hidden;
-  }
-
-  .mob-hud-row {
-    display: flex;
-    gap: 8px;
-  }
-
-  .mob-hud-box {
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,215,0,0.15);
-    padding: 5px 7px;
-    flex: 1;
-    min-width: 0;
-  }
-  .mob-hud-box h4 {
-    font-size: 5px;
-    color: var(--border);
-    margin-bottom: 4px;
-    letter-spacing: 1px;
-  }
-
-  #mobPlayerHud { display: flex; flex-direction: column; gap: 3px; }
-  .mob-player-row {
-    display: flex; align-items: center; gap: 4px;
-    font-size: 5px; color: var(--text2);
-  }
-  .mob-color-dot { width: 6px; height: 6px; flex-shrink: 0; }
-  .mob-lives { color: var(--red); font-size: 5px; }
-  .mob-score { color: var(--green); margin-left: auto; font-size: 5px; }
-
-  #mobEnemyRow {
-    display: flex; flex-wrap: wrap; gap: 2px; align-items: center;
-  }
-  .mob-enemy-icon {
-    width: 6px; height: 6px;
-    background: var(--red);
-    clip-path: polygon(50% 0%,0% 100%,100% 100%);
-  }
-  #mobEnemiesLeft { font-size: 5px; color: #888; margin-top: 2px; }
-
-  /* Mobile chat */
-  #mobChatMessages {
-    height: 44px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    font-size: 5px;
-    color: #888;
-  }
-  #mobChatMessages .chat-name { color: var(--border); }
-  #mobChatMessages .system { color: #444; }
-  #mobChatMessages::-webkit-scrollbar { display: none; }
-
-  #mobChatInput {
-    width: 100%;
-    background: rgba(255,255,255,0.05);
-    border: 1px solid #333;
-    color: var(--text2);
-    font-family: 'Press Start 2P', monospace;
-    font-size: 5px;
-    padding: 4px 5px;
-    outline: none;
-    margin-top: 3px;
-  }
-    width: 100px; height: 100px;
-    border-radius: 50%;
-    background: radial-gradient(circle at 35% 35%, #FF6B2B, #8B1A00);
-    border: 3px solid #FF4444;
-    box-shadow: 0 0 20px rgba(255,68,68,0.4);
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    font-family: 'Press Start 2P', monospace;
-    font-size: 9px; color: #fff;
-    touch-action: none;
-    transition: all .08s;
-    letter-spacing: 1px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.8);
-  }
-  #fireBtn .fire-icon { font-size: 22px; line-height: 1; margin-bottom: 4px; }
-  #fireBtn.pressed {
-    transform: scale(0.92);
-    background: radial-gradient(circle at 35% 35%, #FF4444, #CC0000);
-    box-shadow: 0 0 30px rgba(255,68,68,0.7);
-  }
-
-  /* Mobile: hide sidebar, stack canvas + controls */
-  @media (max-width: 767px) {
-    #gameScreen {
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      /* push content below notch */
-      padding-top: calc(var(--sat) + 8px);
-      padding-left: calc(var(--sal) + 6px);
-      padding-right: calc(var(--sar) + 6px);
-      padding-bottom: 0;
-      gap: 0;
-    }
-    .game-sidebar { display: none; }
-    #gameCanvas { margin: 0 auto; }
-  }
-
-  /* ── GAME OVER OVERLAY ──────────────────────────────────── */
-  #gameOverlay {
-    display: none; position: fixed; inset: 0;
-    background: rgba(0,0,0,.87); z-index: 300;
-    align-items: center; justify-content: center; flex-direction: column; gap: 18px;
-  }
-  #gameOverlay.show { display: flex; }
-  #overlayTitle { font-size: clamp(14px,4vw,28px); text-align: center; animation: blink .8s infinite; }
-  #overlayTitle.win  { color: var(--green); text-shadow: 0 0 20px var(--green); }
-  #overlayTitle.lose { color: var(--red);   text-shadow: 0 0 20px var(--red);   }
-  @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
-
-  #pingDisplay { position: fixed; top: 6px; right: 6px; font-size: 7px; color: #333; z-index: 50; }
-
-  /* Lobby responsive */
-  @media (max-width: 680px) {
-    .lobby-layout { grid-template-columns: 1fr; }
-    body { overflow-y: auto; }
-    #lobbyScreen { overflow-y: auto; touch-action: pan-y; }
+  @media(max-width:680px){
+    .lobby-layout{grid-template-columns:1fr;}
+    body{overflow-y:auto;}
+    #lobbyScreen{overflow-y:auto;touch-action:pan-y;}
   }
 </style>
 </head>
 <body>
 
-<!-- ── LOBBY ─────────────────────────────────────────────── -->
+<!-- LOBBY -->
 <div id="lobbyScreen" class="screen active">
   <div class="logo">
     <h1>⚔ BATTLE CITY ONLINE ⚔</h1>
     <div class="sub">MULTIPLAYER · 8-BIT · ARCADE</div>
   </div>
-
   <div class="lobby-layout">
     <div>
       <div class="panel glow" data-title="SERVER BROWSER" style="margin-bottom:12px">
@@ -401,54 +234,45 @@
         </div>
         <div id="roomList"><div style="font-size:7px;color:#444;text-align:center;padding:20px">LOADING...</div></div>
       </div>
-
       <div class="panel" data-title="YOUR CALLSIGN">
-        <div class="form-group">
-          <label>PLAYER NAME</label>
-          <input type="text" id="playerName" placeholder="TANK_COMMANDER" maxlength="12">
-        </div>
+        <div class="form-group"><label>PLAYER NAME</label>
+          <input type="text" id="playerName" placeholder="TANK_COMMANDER" maxlength="12"></div>
         <button class="btn btn-green" onclick="joinSelected()">▶ JOIN ROOM</button>
       </div>
     </div>
-
     <div>
       <div class="panel" data-title="CREATE ROOM" style="margin-bottom:12px">
-        <div class="form-group">
-          <label>ROOM NAME</label>
-          <input type="text" id="newRoomName" placeholder="MY BATTLE ROOM" maxlength="20">
-        </div>
-        <div class="form-group">
-          <label>MAP</label>
-          <select id="mapSelect"><option value="0">Classic</option><option value="1">Fortress</option></select>
-        </div>
+        <div class="form-group"><label>ROOM NAME</label>
+          <input type="text" id="newRoomName" placeholder="MY BATTLE ROOM" maxlength="20"></div>
+        <div class="form-group"><label>MODE / MAP</label>
+          <select id="mapSelect"></select></div>
         <button class="btn btn-gold" onclick="createRoom()">✚ CREATE ROOM</button>
       </div>
-
-      <div class="panel" data-title="HOW TO PLAY">
-        <div class="controls-help">
-          📱 MOBILE: USE JOYSTICK<br>
-          ⌨ PC: WASD / ARROWS<br>
-          🔥 FIRE: RED BUTTON<br><br>
-          DESTROY ALL ENEMIES!<br>
-          PROTECT THE EAGLE!
+      <div class="panel" data-title="MODES">
+        <div style="font-size:6px;color:#aaa;line-height:2.2">
+          <span style="color:#44FF88">■ CO-OP</span> — PLAYERS VS AI<br>
+          <span style="color:#FF4444">■ DEATHMATCH</span> — ALL VS ALL<br>
+          <span style="color:#FF8C00">■ DM + BOTS</span> — PLAYERS + AI<br>
+          &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ALL VS ALL<br><br>
+          DM MODES: UP TO 8 PLAYERS<br>
+          FIRST TO 20 FRAGS WINS!
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ── GAME SCREEN ───────────────────────────────────────── -->
+<!-- GAME SCREEN -->
 <div id="gameScreen" class="screen">
   <div id="pingDisplay">--ms</div>
-
   <canvas id="gameCanvas" width="416" height="416"></canvas>
-
   <div class="game-sidebar">
+    <div id="gameModeLabel"></div>
     <div class="sidebar-section">
-      <h3>▶ PLAYERS</h3>
-      <div class="player-hud" id="playerHud"></div>
+      <h3 id="scoreboardTitle">▶ PLAYERS</h3>
+      <div id="scoreboardContent"></div>
     </div>
-    <div class="sidebar-section">
+    <div class="sidebar-section" id="enemySection">
       <h3>⚠ ENEMIES</h3>
       <div class="enemy-counter" id="enemyCounter"></div>
       <div id="enemiesLeft" style="font-size:6px;color:#888;margin-top:7px"></div>
@@ -460,66 +284,51 @@
         onkeydown="if(event.key==='Enter') sendChat()">
     </div>
     <div class="sidebar-section">
-      <div class="controls-help">WASD / ARROWS — MOVE<br>SPACE — FIRE<br>ESC — LEAVE</div>
+      <div class="controls-help">WASD/ARROWS — MOVE<br>SPACE — FIRE<br>ESC — LEAVE</div>
     </div>
     <button class="btn btn-red" onclick="leaveGame()">✕ LEAVE</button>
   </div>
 </div>
 
-<!-- ── MOBILE CONTROLS ──────────────────────────────────── -->
+<!-- MOBILE CONTROLS -->
 <div id="mobileControls">
-  <!-- Virtual joystick -->
   <div id="joystickZone">
     <div class="dpad">
-      <div class="dpad-btn corner"></div>
-      <div class="dpad-btn" id="dpad_up">▲</div>
-      <div class="dpad-btn corner"></div>
-      <div class="dpad-btn" id="dpad_left">◀</div>
-      <div class="dpad-btn" style="background:rgba(255,215,0,0.04)"></div>
-      <div class="dpad-btn" id="dpad_right">▶</div>
-      <div class="dpad-btn corner"></div>
-      <div class="dpad-btn" id="dpad_down">▼</div>
-      <div class="dpad-btn corner"></div>
+      <div class="dpad-btn corner"></div><div class="dpad-btn" id="dpad_up">▲</div><div class="dpad-btn corner"></div>
+      <div class="dpad-btn" id="dpad_left">◀</div><div class="dpad-btn" style="background:rgba(255,215,0,.04)"></div><div class="dpad-btn" id="dpad_right">▶</div>
+      <div class="dpad-btn corner"></div><div class="dpad-btn" id="dpad_down">▼</div><div class="dpad-btn corner"></div>
     </div>
     <div class="joystick-base"></div>
     <div id="joystickKnob"></div>
   </div>
 
-  <!-- Mini HUD: players + enemies + chat -->
   <div id="mobileHud">
     <div class="mob-hud-row">
-      <!-- Players -->
-      <div class="mob-hud-box" style="max-width:50%">
-        <h4>▶ PLAYERS</h4>
-        <div id="mobPlayerHud"></div>
+      <div class="mob-hud-box" id="mobScoreBox">
+        <h4 id="mobScoreTitle">▶ PLAYERS</h4>
+        <div id="mobScoreContent"></div>
       </div>
-      <!-- Enemies -->
-      <div class="mob-hud-box">
+      <div class="mob-hud-box" id="mobEnemyBox">
         <h4>⚠ ENEMIES</h4>
         <div id="mobEnemyRow"></div>
         <div id="mobEnemiesLeft"></div>
       </div>
     </div>
-    <!-- Chat -->
-    <div class="mob-hud-box" style="flex:1">
+    <div class="mob-hud-box">
       <h4>💬 CHAT</h4>
       <div id="mobChatMessages"></div>
       <input id="mobChatInput" type="text" placeholder="TYPE + ENTER" maxlength="50"
-        onkeydown="if(event.key==='Enter'){sendMobChat();}" autocomplete="off">
+        onkeydown="if(event.key==='Enter') sendMobChat();" autocomplete="off">
     </div>
   </div>
 
-  <!-- Fire button -->
-  <div id="fireBtn">
-    <div class="fire-icon">🔥</div>
-    FIRE
-  </div>
+  <div id="fireBtn"><div class="fire-icon">🔥</div>FIRE</div>
 </div>
 
-<!-- ── GAME OVER ─────────────────────────────────────────── -->
+<!-- GAME OVER -->
 <div id="gameOverlay">
   <div id="overlayTitle"></div>
-  <div id="overlayScore" style="font-size:8px;color:#aaa;text-align:center;padding:0 20px"></div>
+  <div id="overlayScore"></div>
   <button class="btn btn-green" style="width:200px" onclick="requestRestart()">↺ PLAY AGAIN</button>
   <button class="btn btn-red"   style="width:200px" onclick="leaveGame()">⬅ LOBBY</button>
 </div>
