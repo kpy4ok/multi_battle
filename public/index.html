@@ -2,8 +2,9 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>BATTLE CITY ONLINE</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -19,6 +20,12 @@
     --green: #44FF88;
     --blue: #44AAFF;
     --scanline: rgba(0,0,0,0.12);
+    /* iPhone notch / Dynamic Island safe areas */
+    --sat: env(safe-area-inset-top, 0px);
+    --sab: env(safe-area-inset-bottom, 0px);
+    --sal: env(safe-area-inset-left, 0px);
+    --sar: env(safe-area-inset-right, 0px);
+    --ctrl-h: 190px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -181,14 +188,18 @@
     display: none; /* shown by JS on mobile */
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    height: 185px;
-    background: rgba(0,0,0,0.75);
-    border-top: 1px solid #333;
+    /* expand height to absorb home-bar safe area */
+    height: calc(var(--ctrl-h) + var(--sab));
+    padding-bottom: var(--sab);
+    background: rgba(8,8,14,0.92);
+    border-top: 1px solid #2a2a3a;
     align-items: center;
     justify-content: space-between;
-    padding: 0 30px;
+    padding-left:  calc(20px + var(--sal));
+    padding-right: calc(20px + var(--sar));
     z-index: 200;
     touch-action: none;
+    backdrop-filter: blur(6px);
   }
 
   /* Joystick */
@@ -238,8 +249,80 @@
     transition: box-shadow .1s;
   }
 
-  /* Fire button */
-  #fireBtn {
+  /* Mini HUD in mobile controls center */
+  #mobileHud {
+    flex: 1;
+    margin: 0 14px;
+    height: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow: hidden;
+  }
+
+  .mob-hud-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .mob-hud-box {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,215,0,0.15);
+    padding: 5px 7px;
+    flex: 1;
+    min-width: 0;
+  }
+  .mob-hud-box h4 {
+    font-size: 5px;
+    color: var(--border);
+    margin-bottom: 4px;
+    letter-spacing: 1px;
+  }
+
+  #mobPlayerHud { display: flex; flex-direction: column; gap: 3px; }
+  .mob-player-row {
+    display: flex; align-items: center; gap: 4px;
+    font-size: 5px; color: var(--text2);
+  }
+  .mob-color-dot { width: 6px; height: 6px; flex-shrink: 0; }
+  .mob-lives { color: var(--red); font-size: 5px; }
+  .mob-score { color: var(--green); margin-left: auto; font-size: 5px; }
+
+  #mobEnemyRow {
+    display: flex; flex-wrap: wrap; gap: 2px; align-items: center;
+  }
+  .mob-enemy-icon {
+    width: 6px; height: 6px;
+    background: var(--red);
+    clip-path: polygon(50% 0%,0% 100%,100% 100%);
+  }
+  #mobEnemiesLeft { font-size: 5px; color: #888; margin-top: 2px; }
+
+  /* Mobile chat */
+  #mobChatMessages {
+    height: 44px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 5px;
+    color: #888;
+  }
+  #mobChatMessages .chat-name { color: var(--border); }
+  #mobChatMessages .system { color: #444; }
+  #mobChatMessages::-webkit-scrollbar { display: none; }
+
+  #mobChatInput {
+    width: 100%;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid #333;
+    color: var(--text2);
+    font-family: 'Press Start 2P', monospace;
+    font-size: 5px;
+    padding: 4px 5px;
+    outline: none;
+    margin-top: 3px;
+  }
     width: 100px; height: 100px;
     border-radius: 50%;
     background: radial-gradient(circle at 35% 35%, #FF6B2B, #8B1A00);
@@ -267,7 +350,11 @@
       flex-direction: column;
       align-items: center;
       justify-content: flex-start;
-      padding: 6px 6px 0;
+      /* push content below notch */
+      padding-top: calc(var(--sat) + 8px);
+      padding-left: calc(var(--sal) + 6px);
+      padding-right: calc(var(--sar) + 6px);
+      padding-bottom: 0;
       gap: 0;
     }
     .game-sidebar { display: none; }
@@ -398,10 +485,28 @@
     <div id="joystickKnob"></div>
   </div>
 
-  <!-- Center info (mini HUD for mobile) -->
-  <div style="display:flex;flex-direction:column;align-items:center;gap:8px">
-    <div id="mobileHudPlayers" style="font-size:6px;color:#aaa;text-align:center;max-width:90px"></div>
-    <button class="btn btn-red" onclick="leaveGame()" style="width:80px;padding:6px;font-size:6px;margin:0">✕ LEAVE</button>
+  <!-- Mini HUD: players + enemies + chat -->
+  <div id="mobileHud">
+    <div class="mob-hud-row">
+      <!-- Players -->
+      <div class="mob-hud-box" style="max-width:50%">
+        <h4>▶ PLAYERS</h4>
+        <div id="mobPlayerHud"></div>
+      </div>
+      <!-- Enemies -->
+      <div class="mob-hud-box">
+        <h4>⚠ ENEMIES</h4>
+        <div id="mobEnemyRow"></div>
+        <div id="mobEnemiesLeft"></div>
+      </div>
+    </div>
+    <!-- Chat -->
+    <div class="mob-hud-box" style="flex:1">
+      <h4>💬 CHAT</h4>
+      <div id="mobChatMessages"></div>
+      <input id="mobChatInput" type="text" placeholder="TYPE + ENTER" maxlength="50"
+        onkeydown="if(event.key==='Enter'){sendMobChat();}" autocomplete="off">
+    </div>
   </div>
 
   <!-- Fire button -->
