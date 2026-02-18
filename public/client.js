@@ -12,6 +12,7 @@ let selectedRoomId = null;
 let gameState = null, mapData = null;
 let lastRender = 0, animTick = 0;
 let pingMs = 0, pingStart = 0;
+let autoLeaveTimer = null;  // countdown interval on game-over screen
 
 const keys = {};
 const canvas = document.getElementById('gameCanvas');
@@ -77,6 +78,11 @@ socket.on('gameRestarted', ({mapData:md, mode}) => {
   document.getElementById('gameOverlay').classList.remove('show');
   gameState = null;
   updateModeUI();
+});
+// Server force-reset (35s auto-cleanup)
+socket.on('serverReset', () => {
+  if (autoLeaveTimer) { clearInterval(autoLeaveTimer); autoLeaveTimer = null; }
+  leaveGame();
 });
 socket.on('playerJoined', ({name}) => addChatMessage('system', `${name} joined!`));
 socket.on('playerLeft',   ()        => addChatMessage('system', 'A player left.'));
@@ -151,13 +157,17 @@ function showScreen(id) {
   if (mc) mc.style.display = (id==='gameScreen' && isMobile()) ? 'flex' : 'none';
 }
 function leaveGame() {
+  if (autoLeaveTimer) { clearInterval(autoLeaveTimer); autoLeaveTimer = null; }
   document.getElementById('gameOverlay').classList.remove('show');
   socket.disconnect(); socket.connect();
   showScreen('lobbyScreen');
   gameState = null; mapData = null; currentRoomId = null; currentMode = 'coop';
   socket.emit('roomList');
 }
-function requestRestart() { socket.emit('restartGame'); }
+function requestRestart() {
+  if (autoLeaveTimer) { clearInterval(autoLeaveTimer); autoLeaveTimer = null; }
+  socket.emit('restartGame');
+}
 
 // ── Canvas resize ─────────────────────────────────────────
 function resizeCanvas() {
@@ -371,14 +381,16 @@ function renderDMScoreboard(state) {
 }
 
 function showGameOver(state) {
+  // Only trigger once
+  if (document.getElementById('gameOverlay').classList.contains('show')) return;
   document.getElementById('gameOverlay').classList.add('show');
+
   const title = document.getElementById('overlayTitle');
   const isDM  = state.mode==='deathmatch'||state.mode==='deathmatch_bots';
 
   if (isDM) {
     title.textContent = `🏆 ${state.winner} WINS!`;
     title.className   = 'dm';
-    // Final scoreboard
     const all = [...(state.players||[]), ...(state.bots||[])].sort((a,b)=>b.score-a.score);
     document.getElementById('overlayScore').innerHTML =
       all.map(p=>`<span style="color:${p.color}">■ ${escHtml(p.name)}</span>  ${p.score}K / ${p.deaths}D`).join('<br>');
@@ -388,6 +400,22 @@ function showGameOver(state) {
     document.getElementById('overlayScore').innerHTML =
       state.players.map(p=>`${escHtml(p.name)}: ${p.score} pts`).join('<br>');
   }
+
+  // ── 30-second auto-redirect countdown ──────────────────
+  if (autoLeaveTimer) clearInterval(autoLeaveTimer);
+  let remaining = 30;
+  const timerEl = document.getElementById('overlayCountdown');
+  if (timerEl) timerEl.textContent = `LOBBY IN ${remaining}s`;
+
+  autoLeaveTimer = setInterval(() => {
+    remaining--;
+    if (timerEl) timerEl.textContent = `LOBBY IN ${remaining}s`;
+    if (remaining <= 0) {
+      clearInterval(autoLeaveTimer);
+      autoLeaveTimer = null;
+      leaveGame();
+    }
+  }, 1000);
 }
 
 // ── Renderer ──────────────────────────────────────────────
