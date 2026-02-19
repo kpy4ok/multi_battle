@@ -37,13 +37,44 @@ const MODE_LABELS = {
   deathmatch_bots:  'DM + BOTS',
 };
 
+// ── UID persistence ───────────────────────────────────────
+// Stored in localStorage so the same browser keeps the same UID across sessions
+function getStoredUID() {
+  try { return localStorage.getItem('bcity_uid') || ''; } catch(e) { return ''; }
+}
+function setStoredUID(uid) {
+  try { localStorage.setItem('bcity_uid', uid); } catch(e) {}
+}
+function getResolution() {
+  return `${window.screen.width}x${window.screen.height}`;
+}
+
+// Fire page_open once on load (via HTTP so we capture real IP behind nginx)
+(function sendPageOpen() {
+  try {
+    fetch('/api/pageopen', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ uid: getStoredUID(), resolution: getResolution() }),
+    });
+  } catch(e) {}
+})();
+
 // ── Socket ────────────────────────────────────────────────
 socket = io();
 
 socket.on('connect', () => {
   myId = socket.id;
+  // Register with server — send stored UID so server can match returning users
+  socket.emit('register', { uid: getStoredUID(), resolution: getResolution() });
   setInterval(() => { pingStart = Date.now(); socket.emit('ping_'); }, 2000);
 });
+
+// Server confirms/assigns UID
+socket.on('registered', ({ uid }) => {
+  setStoredUID(uid);
+});
+
 socket.on('pong_', () => {
   pingMs = Date.now() - pingStart;
   const el = document.getElementById('pingDisplay');
