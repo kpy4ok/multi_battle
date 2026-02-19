@@ -214,7 +214,48 @@
     .lobby-layout{grid-template-columns:1fr;}
     body{overflow-y:auto;}
     #lobbyScreen{overflow-y:auto;touch-action:pan-y;}
+    .lb-grid{grid-template-columns:1fr;}
+    .lb-stats-bar .lb-stat{min-width:60px;padding:8px 10px;}
   }
+
+  /* ── LEADERBOARD ── */
+  .leaderboard-section{width:100%;max-width:880px;margin-top:16px;padding-bottom:30px;}
+
+  .lb-stats-bar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+  .lb-stat{background:var(--panel);border:1px solid var(--border2);
+    padding:10px 16px;flex:1;min-width:90px;text-align:center;}
+  .lb-stat.record{border-color:var(--border);box-shadow:0 0 10px rgba(255,215,0,.1);}
+  .lb-stat-val{display:block;font-size:clamp(14px,3vw,22px);color:var(--border);margin-bottom:2px;}
+  .lb-stat-lbl{font-size:5px;color:#666;letter-spacing:1px;display:block;}
+
+  .lb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+
+  .lb-loading{font-size:7px;color:#444;text-align:center;padding:16px;}
+
+  .lb-table{width:100%;border-collapse:collapse;}
+  .lb-table th{font-size:6px;color:var(--border);padding:4px 6px;
+    border-bottom:1px solid #2a2a2a;text-align:left;letter-spacing:1px;}
+  .lb-table td{font-size:7px;padding:5px 6px;border-bottom:1px solid #1a1a1a;color:var(--text2);}
+  .lb-table tr:hover td{background:#111;}
+  .lb-rank{color:#555;font-size:6px;width:18px;text-align:center;}
+  .lb-rank.gold{color:#FFD700;} .lb-rank.silver{color:#AAA;} .lb-rank.bronze{color:#CD7F32;}
+  .lb-wins{color:var(--green)!important;}
+  .lb-score{color:#44AAFF!important;}
+  .lb-wr{color:#FF8C00!important;font-size:6px!important;}
+
+  .lb-game{border-bottom:1px solid #1a1a1a;padding:7px 4px;}
+  .lb-game:last-child{border-bottom:none;}
+  .lb-game-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;}
+  .lb-game-room{color:var(--text2);font-size:7px;}
+  .lb-game-mode{padding:1px 5px;font-size:5px;border:1px solid;}
+  .lb-game-mode.coop{color:#44FF88;border-color:#44FF88;}
+  .lb-game-mode.deathmatch{color:#FF4444;border-color:#FF4444;}
+  .lb-game-mode.deathmatch_bots{color:#FF8C00;border-color:#FF8C00;}
+  .lb-game-time{color:#444;font-size:5px;}
+  .lb-game-players{display:flex;flex-wrap:wrap;gap:4px;}
+  .lb-chip{padding:2px 6px;font-size:5px;border:1px solid #333;border-radius:2px;}
+  .lb-chip.win{color:#44FF88;border-color:#44FF88;background:rgba(68,255,136,.07);}
+  .lb-chip.loss{color:#555;}
 </style>
 </head>
 <body>
@@ -226,6 +267,7 @@
     <div class="sub">MULTIPLAYER · 8-BIT · ARCADE</div>
   </div>
   <div class="lobby-layout">
+    <!-- Left: room browser + join -->
     <div>
       <div class="panel glow" data-title="SERVER BROWSER" style="margin-bottom:12px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
@@ -240,6 +282,8 @@
         <button class="btn btn-green" onclick="joinSelected()">▶ JOIN ROOM</button>
       </div>
     </div>
+
+    <!-- Right: create + modes -->
     <div>
       <div class="panel" data-title="CREATE ROOM" style="margin-bottom:12px">
         <div class="form-group"><label>ROOM NAME</label>
@@ -259,6 +303,38 @@
         </div>
       </div>
     </div>
+  </div>
+
+  <!-- Full-width leaderboard -->
+  <div class="leaderboard-section">
+
+    <!-- Global stats bar -->
+    <div class="lb-stats-bar" id="lbGlobalStats">
+      <div class="lb-stat"><span class="lb-stat-val" id="lbTotalPlayers">—</span><span class="lb-stat-lbl">PLAYERS</span></div>
+      <div class="lb-stat"><span class="lb-stat-val" id="lbTotalGames">—</span><span class="lb-stat-lbl">GAMES PLAYED</span></div>
+      <div class="lb-stat"><span class="lb-stat-val" id="lbTotalFrags">—</span><span class="lb-stat-lbl">TOTAL FRAGS</span></div>
+      <div class="lb-stat record">
+        <span class="lb-stat-val" id="lbRecordScore">—</span>
+        <span class="lb-stat-lbl">RECORD SCORE<br><span id="lbRecordHolder" style="color:#888;font-size:5px"></span></span>
+      </div>
+    </div>
+
+    <div class="lb-grid">
+      <!-- Top players -->
+      <div class="panel" data-title="🏆 TOP PLAYERS">
+        <div id="lbTopPlayers">
+          <div class="lb-loading">LOADING...</div>
+        </div>
+      </div>
+
+      <!-- Recent games -->
+      <div class="panel" data-title="🕹 RECENT GAMES">
+        <div id="lbRecentGames">
+          <div class="lb-loading">LOADING...</div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </div>
 
