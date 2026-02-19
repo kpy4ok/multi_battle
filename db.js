@@ -182,4 +182,37 @@ function getStats() {
   };
 }
 
-module.exports = { log, saveResult, getStats };
+// ── Public leaderboard (no sensitive data) ───────────────
+function getPublicStats() {
+  return {
+    topPlayers: db.prepare(`
+      SELECT username,
+             COUNT(*)                                         AS games,
+             SUM(CASE WHEN result='win' THEN 1 ELSE 0 END)   AS wins,
+             SUM(score)                                       AS total_score,
+             SUM(deaths)                                      AS total_deaths,
+             MAX(score)                                       AS best_score
+      FROM game_results
+      GROUP BY uid
+      ORDER BY wins DESC, total_score DESC
+      LIMIT 15`).all(),
+
+    recentGames: db.prepare(`
+      SELECT room_name, mode, ts,
+             GROUP_CONCAT(username || ':' || result || ':' || score, '|') AS players_raw
+      FROM game_results
+      GROUP BY room_id, ts / 10000   -- group same game (within 10s window)
+      ORDER BY ts DESC
+      LIMIT 10`).all(),
+
+    totalStats: db.prepare(`
+      SELECT COUNT(DISTINCT uid)   AS unique_players,
+             COUNT(*)              AS total_games,
+             SUM(score)            AS total_frags,
+             MAX(score)            AS record_score,
+             (SELECT username FROM game_results ORDER BY score DESC LIMIT 1) AS record_holder
+      FROM game_results`).get(),
+  };
+}
+
+module.exports = { log, saveResult, getStats, getPublicStats };
