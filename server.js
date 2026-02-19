@@ -15,6 +15,15 @@ const io     = new Server(server, { cors: { origin: '*' } });
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ── Public leaderboard API (no auth needed) ────────────────
+app.get('/api/leaderboard', (req, res) => {
+  try {
+    res.json(db.getPublicStats());
+  } catch(e) {
+    res.json({ topPlayers: [], recentGames: [], totalStats: null });
+  }
+});
+
 // ── UID helpers ────────────────────────────────────────────
 // UID is generated server-side per new socket connection and sent to client.
 // Client stores it in localStorage and sends it back on reconnect.
