@@ -194,6 +194,7 @@ function leaveGame() {
   showScreen('lobbyScreen');
   gameState = null; mapData = null; currentRoomId = null; currentMode = 'coop';
   socket.emit('roomList');
+  loadLeaderboard(); // refresh scores after returning from a game
 }
 function requestRestart() {
   if (autoLeaveTimer) { clearInterval(autoLeaveTimer); autoLeaveTimer = null; }
@@ -601,6 +602,103 @@ function darken(hex,a){
 }
 function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
+// ── Leaderboard ───────────────────────────────────────────
+async function loadLeaderboard() {
+  try {
+    const res  = await fetch('/api/leaderboard');
+    const data = await res.json();
+    renderGlobalStats(data.totalStats);
+    renderTopPlayers(data.topPlayers);
+    renderRecentGames(data.recentGames);
+  } catch(e) {
+    document.getElementById('lbTopPlayers').innerHTML  = '<div class="lb-loading">NO DATA YET</div>';
+    document.getElementById('lbRecentGames').innerHTML = '<div class="lb-loading">NO DATA YET</div>';
+  }
+}
+
+function renderGlobalStats(s) {
+  if (!s) return;
+  const set = (id, v) => { const el=document.getElementById(id); if(el) el.textContent=v; };
+  set('lbTotalPlayers', s.unique_players || 0);
+  set('lbTotalGames',   s.total_games    || 0);
+  set('lbTotalFrags',   s.total_frags    || 0);
+  set('lbRecordScore',  s.record_score   || 0);
+  set('lbRecordHolder', s.record_holder ? `by ${s.record_holder}` : '');
+}
+
+function renderTopPlayers(players) {
+  const el = document.getElementById('lbTopPlayers');
+  if (!el) return;
+  if (!players || !players.length) {
+    el.innerHTML = '<div class="lb-loading">NO GAMES PLAYED YET</div>'; return;
+  }
+  const rankClass = i => i===0?'gold':i===1?'silver':i===2?'bronze':'';
+  const rankIcon  = i => i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
+  const wr = p => p.games ? Math.round(p.wins/p.games*100) : 0;
+
+  el.innerHTML = `
+    <table class="lb-table">
+      <thead><tr>
+        <th>#</th><th>NAME</th><th>WINS</th><th>GAMES</th><th>W/R</th><th>BEST</th>
+      </tr></thead>
+      <tbody>
+        ${players.map((p,i) => `<tr>
+          <td class="lb-rank ${rankClass(i)}">${rankIcon(i)}</td>
+          <td>${escHtml(p.username||'?')}</td>
+          <td class="lb-wins">${p.wins}</td>
+          <td style="color:#888">${p.games}</td>
+          <td class="lb-wr">${wr(p)}%</td>
+          <td class="lb-score">${p.best_score}</td>
+        </tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+
+function renderRecentGames(games) {
+  const el = document.getElementById('lbRecentGames');
+  if (!el) return;
+  if (!games || !games.length) {
+    el.innerHTML = '<div class="lb-loading">NO GAMES PLAYED YET</div>'; return;
+  }
+
+  const modeLabel = m => ({coop:'CO-OP',deathmatch:'DM',deathmatch_bots:'DM+BOT'}[m]||m||'?');
+  const timeAgo = ts => {
+    const s = Math.floor((Date.now()-ts)/1000);
+    if (s<60)  return `${s}s ago`;
+    if (s<3600) return `${Math.floor(s/60)}m ago`;
+    if (s<86400) return `${Math.floor(s/3600)}h ago`;
+    return `${Math.floor(s/86400)}d ago`;
+  };
+
+  el.innerHTML = games.map(g => {
+    // players_raw format: "name:result:score|name:result:score"
+    const playerChips = (g.players_raw||'').split('|').filter(Boolean).map(raw => {
+      const [name, result, score] = raw.split(':');
+      return `<span class="lb-chip ${result}">${escHtml(name||'?')} <strong>${score||0}</strong></span>`;
+    }).join('');
+
+    return `<div class="lb-game">
+      <div class="lb-game-header">
+        <span class="lb-game-room">${escHtml(g.room_name||'Room')}</span>
+        <span class="lb-game-mode ${g.mode}">${modeLabel(g.mode)}</span>
+        <span class="lb-game-time">${timeAgo(g.ts)}</span>
+      </div>
+      <div class="lb-game-players">${playerChips}</div>
+    </div>`;
+  }).join('');
+}
+
+// Reload leaderboard every 30s while on lobby screen
+function startLeaderboardPolling() {
+  loadLeaderboard();
+  setInterval(() => {
+    if (document.getElementById('lobbyScreen').classList.contains('active')) {
+      loadLeaderboard();
+    }
+  }, 30000);
+}
+
 // ── Boot ──────────────────────────────────────────────────
 setupTouchControls();
 resizeCanvas();
+startLeaderboardPolling();
