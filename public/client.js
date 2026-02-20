@@ -1,7 +1,8 @@
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────
-const TILE = 16, COLS = 26, ROWS = 26, TANK_SIZE = 14, BULLET_SIZE = 4;
+const TILE = 16, TANK_SIZE = 14, BULLET_SIZE = 4;
+let COLS = 26, ROWS = 26;  // updated per map on joinedRoom / gameState
 const DIR = { UP:0, RIGHT:1, DOWN:2, LEFT:3 };
 const DX  = [0, 1, 0, -1];
 const DY  = [-1, 0, 1, 0];
@@ -88,9 +89,14 @@ socket.on('mapList', (maps) => {
   ).join('');
 });
 socket.on('roomCreated', ({roomId}) => { selectedRoomId = roomId; joinSelected(); });
-socket.on('joinedRoom', ({roomId, playerId, mapData:md, mode, fragLimit}) => {
+socket.on('joinedRoom', ({roomId, playerId, mapData:md, mode, cols, rows, fragLimit}) => {
   myId = playerId; currentRoomId = roomId; currentMode = mode || 'coop';
   mapData = md;
+  if (cols) COLS = cols;
+  if (rows) ROWS = rows;
+  canvas.width  = COLS * TILE;
+  canvas.height = ROWS * TILE;
+  ctx.imageSmoothingEnabled = false;
   updateModeUI();
   showScreen('gameScreen');
   resizeCanvas();
@@ -101,14 +107,19 @@ socket.on('gameState', (state) => {
   gameState = state;
   currentMode = state.mode || currentMode;
   if (state.mapData) mapData = state.mapData;
+  if (state.cols && state.cols !== COLS) { COLS = state.cols; canvas.width  = COLS * TILE; ctx.imageSmoothingEnabled = false; }
+  if (state.rows && state.rows !== ROWS) { ROWS = state.rows; canvas.height = ROWS * TILE; ctx.imageSmoothingEnabled = false; }
   if (state.gameOver) showGameOver(state);
   updateHUD(state);
 });
-socket.on('gameRestarted', ({mapData:md, mode}) => {
+socket.on('gameRestarted', ({mapData:md, mode, cols, rows}) => {
   mapData = md; currentMode = mode || currentMode;
+  if (cols) { COLS = cols; canvas.width  = COLS * TILE; ctx.imageSmoothingEnabled = false; }
+  if (rows) { ROWS = rows; canvas.height = ROWS * TILE; ctx.imageSmoothingEnabled = false; }
   document.getElementById('gameOverlay').classList.remove('show');
   gameState = null;
   updateModeUI();
+  resizeCanvas();
 });
 // Server force-reset (35s auto-cleanup)
 socket.on('serverReset', () => {
