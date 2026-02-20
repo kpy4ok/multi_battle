@@ -645,12 +645,12 @@ function renderTopPlayers(players) {
   }
   const rankClass = i => i===0?'gold':i===1?'silver':i===2?'bronze':'';
   const rankIcon  = i => i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
-  const wr = p => p.games ? Math.round(p.wins/p.games*100) : 0;
+  const wd = p => p.total_deaths ? (p.wins / p.total_deaths).toFixed(2) : p.wins.toFixed(2);
 
   el.innerHTML = `
     <table class="lb-table">
       <thead><tr>
-        <th>#</th><th>NAME</th><th>WINS</th><th>GAMES</th><th>W/R</th><th>FRAGS</th><th>DEATHS</th>
+        <th>#</th><th>NAME</th><th>WINS</th><th>GAMES</th><th>W/D</th><th>FRAGS</th><th>DEATHS</th>
       </tr></thead>
       <tbody>
         ${players.map((p,i) => `<tr>
@@ -658,7 +658,7 @@ function renderTopPlayers(players) {
           <td>${escHtml(p.username||'?')}</td>
           <td class="lb-wins">${p.wins}</td>
           <td style="color:#888">${p.games}</td>
-          <td class="lb-wr">${wr(p)}%</td>
+          <td class="lb-wr">${wd(p)}</td>
           <td class="lb-score">${p.total_score}</td>
           <td class="lb-deaths">${p.total_deaths}</td>
         </tr>`).join('')}
