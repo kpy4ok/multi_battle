@@ -645,7 +645,7 @@ function renderTopPlayers(players) {
   }
   const rankClass = i => i===0?'gold':i===1?'silver':i===2?'bronze':'';
   const rankIcon  = i => i===0?'🥇':i===1?'🥈':i===2?'🥉':`${i+1}`;
-  const wd = p => p.total_deaths ? (p.wins / p.total_deaths).toFixed(2) : p.wins.toFixed(2);
+  const wd = p => p.total_deaths ? (p.total_score / p.total_deaths).toFixed(2) : p.total_score.toFixed(2);
 
   el.innerHTML = `
     <table class="lb-table">
