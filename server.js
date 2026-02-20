@@ -18,7 +18,9 @@ app.use(express.static(path.join(__dirname, 'public')));
 // ── Public leaderboard API (no auth needed) ────────────────
 app.get('/api/leaderboard', (req, res) => {
   try {
-    res.json(db.getPublicStats());
+    const data = db.getPublicStats();
+    console.log('[leaderboard] topPlayers:', JSON.stringify(data.topPlayers));
+    res.json(data);
   } catch(e) {
     res.json({ topPlayers: [], recentGames: [], totalStats: null });
   }
