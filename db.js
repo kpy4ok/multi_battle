@@ -202,7 +202,6 @@ function getPublicStats() {
       SELECT room_name, mode, ts,
              GROUP_CONCAT(username || ':' || result || ':' || score, '|') AS players_raw
       FROM game_results
-      WHERE mode LIKE 'deathmatch%'
       GROUP BY room_id, ts / 10000
       ORDER BY ts DESC
       LIMIT 10`).all(),
