@@ -85,7 +85,7 @@ socket.on('roomList',  renderRoomList);
 socket.on('mapList', (maps) => {
   const sel = document.getElementById('mapSelect');
   sel.innerHTML = maps.map(m =>
-    `<option value="${m.index}">[${modeBadgeText(m.mode)}] ${m.name}</option>`
+    `<option value="${m.index}" ${m.index === 4 ? 'selected' : ''}>[${modeBadgeText(m.mode)}] ${m.name}</option>`
   ).join('');
 });
 socket.on('roomCreated', ({roomId}) => { selectedRoomId = roomId; joinSelected(); });
