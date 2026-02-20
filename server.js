@@ -56,7 +56,7 @@ const ADMIN_TOKEN = process.env.ADMIN_TOKEN || 'changeme';   // set via env var 
 app.get('/admin', (req, res) => {
   if (req.query.token !== ADMIN_TOKEN) return res.status(403).send('Forbidden');
   const s = db.getStats();
-  const fmt = ts => new Date(ts).toISOString().replace('T',' ').slice(0,19);
+  const fmt = ts => new Date(ts).toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg', hour12: false }).replace(',','');
   const eventColor = { page_open:'#44AAFF', room_join:'#44FF88', room_create:'#FFD700', room_exit:'#FF8C00', game_win:'#FF4444' };
 
   res.send(`<!DOCTYPE html>
