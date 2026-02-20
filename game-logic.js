@@ -27,7 +27,7 @@ const DY  = [-1, 0, 1, 0];
 
 // 8 distinct tank colors
 const PLAYER_COLORS = [
-  '#FFD700', '#00BFFF', '#FF6347', '#98FB98',
+  '#FFD700', '#9500ff', '#FF6347', '#98FB98',
   '#FF69B4', '#FFA500', '#00FFFF', '#DA70D6',
 ];
 
