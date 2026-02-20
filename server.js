@@ -34,18 +34,21 @@ function newUID() {
 
 // ── IP helper ─────────────────────────────────────────────
 function getIP(socket) {
-  return (
+  const raw =
+    socket.handshake.headers['x-real-ip'] ||
     socket.handshake.headers['x-forwarded-for']?.split(',')[0]?.trim() ||
     socket.handshake.address ||
-    'unknown'
-  );
+    'unknown';
+  // Strip IPv4-mapped IPv6 prefix e.g. ::ffff:1.2.3.4 → 1.2.3.4
+  return raw.replace(/^::ffff:/i, '');
 }
 
 // ── HTTP: page_open event (called by client on first load) ─
 app.post('/api/pageopen', (req, res) => {
   const { uid, resolution } = req.body || {};
-  const ip = (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
-  const ua = req.headers['user-agent'] || '';
+  const raw = (req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+  const ip  = raw.replace(/^::ffff:/i, '');
+  const ua  = req.headers['user-agent'] || '';
   db.log({ uid, event: 'page_open', ip, ua, resolution });
   res.json({ ok: true });
 });
