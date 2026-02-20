@@ -193,6 +193,7 @@ function getPublicStats() {
              SUM(deaths)                                      AS total_deaths,
              MAX(score)                                       AS best_score
       FROM game_results
+      WHERE mode LIKE 'deathmatch%'
       GROUP BY uid
       ORDER BY wins DESC, total_score DESC
       LIMIT 15`).all(),
@@ -201,7 +202,8 @@ function getPublicStats() {
       SELECT room_name, mode, ts,
              GROUP_CONCAT(username || ':' || result || ':' || score, '|') AS players_raw
       FROM game_results
-      GROUP BY room_id, ts / 10000   -- group same game (within 10s window)
+      WHERE mode LIKE 'deathmatch%'
+      GROUP BY room_id, ts / 10000
       ORDER BY ts DESC
       LIMIT 10`).all(),
 
@@ -210,8 +212,9 @@ function getPublicStats() {
              COUNT(*)              AS total_games,
              SUM(score)            AS total_frags,
              MAX(score)            AS record_score,
-             (SELECT username FROM game_results ORDER BY score DESC LIMIT 1) AS record_holder
-      FROM game_results`).get(),
+             (SELECT username FROM game_results WHERE mode LIKE 'deathmatch%' ORDER BY score DESC LIMIT 1) AS record_holder
+      FROM game_results
+      WHERE mode LIKE 'deathmatch%'`).get(),
   };
 }
 
