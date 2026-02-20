@@ -650,7 +650,7 @@ function renderTopPlayers(players) {
   el.innerHTML = `
     <table class="lb-table">
       <thead><tr>
-        <th>#</th><th>NAME</th><th>WINS</th><th>GAMES</th><th>W/R</th><th>BEST</th>
+        <th>#</th><th>NAME</th><th>WINS</th><th>GAMES</th><th>W/R</th><th>FRAGS</th><th>DEATHS</th>
       </tr></thead>
       <tbody>
         ${players.map((p,i) => `<tr>
@@ -659,7 +659,8 @@ function renderTopPlayers(players) {
           <td class="lb-wins">${p.wins}</td>
           <td style="color:#888">${p.games}</td>
           <td class="lb-wr">${wr(p)}%</td>
-          <td class="lb-score">${p.best_score}</td>
+          <td class="lb-score">${p.total_score}</td>
+          <td class="lb-deaths">${p.total_deaths}</td>
         </tr>`).join('')}
       </tbody>
     </table>`;
