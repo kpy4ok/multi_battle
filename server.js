@@ -143,7 +143,7 @@ function getRoomList() {
   }));
 }
 
-function createRoom(name, mapIndex) {
+function createRoom(name, mapIndex, isSystem = false) {
   const idx  = mapIndex || 0;
   const map  = MAPS[idx];
   const isDM = map.mode === 'deathmatch' || map.mode === 'deathmatch_bots';
@@ -155,12 +155,37 @@ function createRoom(name, mapIndex) {
     mapName:       map.name,
     mode:          map.mode,
     maxPlayers:    isDM ? 8 : 4,
+    isSystem,              // system rooms are never deleted
     game:          null,
     hostId:        null,
     stateInterval: null,
-    startedAt:     null,   // for duration_s calculation
+    startedAt:     null,
+    autoResetTimer:   null,
+    emptyDestroyTimer: null,  // 30s grace timer when room goes empty
   };
   return rooms[id];
+}
+
+// Destroy a user room cleanly — stops game, clears all timers, removes from registry
+function destroyUserRoom(room) {
+  if (!room || room.isSystem) return;
+  if (!rooms[room.id]) return;  // already gone
+
+  console.log(`[destroy] user room "${room.name}" (${room.id})`);
+
+  // Clear all timers
+  if (room.stateInterval)    clearInterval(room.stateInterval);
+  if (room.autoResetTimer)   clearTimeout(room.autoResetTimer);
+  if (room.emptyDestroyTimer) clearTimeout(room.emptyDestroyTimer);
+
+  // Stop game loop
+  if (room.game) room.game.stop();
+
+  // Remove from registry
+  delete rooms[room.id];
+
+  // Broadcast updated room list to lobby
+  io.emit('roomList', getRoomList());
 }
 
 function startStateLoop(room) {
@@ -174,16 +199,25 @@ function startStateLoop(room) {
 
     if (g.gameOver) {
       clearInterval(room.stateInterval);
-      // Save results for every player in room
+      room.stateInterval = null;
       saveRoomResults(room, g);
-      // Auto-reset after 35s
+
+      // After 35s: reset system rooms, destroy user rooms
       room.autoResetTimer = setTimeout(() => {
-        if (!room.game || !room.game.gameOver) return;
-        console.log(`[auto-reset] ${room.name}`);
-        room.game.stop();
-        room.game = null;
-        io.to(room.id).emit('serverReset');
-        io.emit('roomList', getRoomList());
+        if (!rooms[room.id]) return; // already destroyed
+
+        if (room.isSystem) {
+          // System room: just wipe the game so it's joinable again
+          if (room.game) { room.game.stop(); room.game = null; }
+          console.log(`[auto-reset] system room "${room.name}"`);
+          io.to(room.id).emit('serverReset');
+          io.emit('roomList', getRoomList());
+        } else {
+          // User room: kick any remaining clients then delete
+          io.to(room.id).emit('serverReset');
+          destroyUserRoom(room);
+        }
+        room.autoResetTimer = null;
       }, 35000);
     }
   }, 33);
@@ -244,12 +278,12 @@ function saveRoomResults(room, game) {
 // socketMeta[socketId] = { uid, ip, ua, resolution }
 const socketMeta = {};
 
-// Default rooms
-createRoom('Classic Battle #1', 0);
-createRoom('Fortress Siege',    1);
-createRoom('Deathmatch Arena',  2);
-createRoom('DM with Bots',      3);
-createRoom('Mini DM with Bots', 4);
+// Default rooms (system — never auto-deleted)
+createRoom('Classic Battle #1', 0, true);
+createRoom('Fortress Siege',    1, true);
+createRoom('Deathmatch Arena',  2, true);
+createRoom('DM with Bots',      3, true);
+createRoom('Mini DM with Bots', 4, true);
 
 // ── Socket.IO ──────────────────────────────────────────────
 io.on('connection', (socket) => {
@@ -298,6 +332,13 @@ io.on('connection', (socket) => {
     socket.join(roomId);
     socket.data.roomId     = roomId;
     socket.data.playerName = playerName;
+
+    // Cancel pending empty-room destroy timer if someone joins in time
+    if (room.emptyDestroyTimer) {
+      clearTimeout(room.emptyDestroyTimer);
+      room.emptyDestroyTimer = null;
+      console.log(`[empty-cancel] "${room.name}" — player joined before timeout`);
+    }
 
     const player = game.addPlayer(socket.id, playerName);
     console.log(`[+] ${playerName} → ${room.name}`);
@@ -379,13 +420,13 @@ io.on('connection', (socket) => {
     const meta = socketMeta[socket.id] || {};
     if (roomId && rooms[roomId]) {
       db.log({
-        uid:      meta.uid,
-        event:    'room_exit',
-        username: socket.data.playerName,
+        uid:        meta.uid,
+        event:      'room_exit',
+        username:   socket.data.playerName,
         ip, ua,
         resolution: meta.resolution,
         roomId,
-        roomName: rooms[roomId]?.name,
+        roomName:   rooms[roomId]?.name,
       });
     }
 
@@ -396,10 +437,28 @@ io.on('connection', (socket) => {
     room.game.removePlayer(socket.id);
     io.to(roomId).emit('playerLeft', { id: socket.id });
     io.emit('roomList', getRoomList());
+
     if (room.game.getPlayerCount() === 0) {
       room.game.stop();
       clearInterval(room.stateInterval);
+      room.stateInterval = null;
       room.game = null;
+
+      // User rooms: destroy after 30s if still empty
+      if (!room.isSystem) {
+        // Cancel any existing empty timer (e.g. from a previous empty spell)
+        if (room.emptyDestroyTimer) clearTimeout(room.emptyDestroyTimer);
+
+        room.emptyDestroyTimer = setTimeout(() => {
+          // Only destroy if still empty (no new players joined during the 30s)
+          if (rooms[room.id] && (!room.game || room.game.getPlayerCount() === 0)) {
+            destroyUserRoom(room);
+          }
+          room.emptyDestroyTimer = null;
+        }, 30000);
+
+        console.log(`[empty] user room "${room.name}" — destroying in 30s if no one joins`);
+      }
     }
   });
 });
