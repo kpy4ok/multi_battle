@@ -249,6 +249,7 @@ createRoom('Classic Battle #1', 0);
 createRoom('Fortress Siege',    1);
 createRoom('Deathmatch Arena',  2);
 createRoom('DM with Bots',      3);
+createRoom('Mini DM with Bots', 4);
 
 // ── Socket.IO ──────────────────────────────────────────────
 io.on('connection', (socket) => {
@@ -306,6 +307,8 @@ io.on('connection', (socket) => {
       playerId:  socket.id,
       player,
       mode:      game.mode,
+      cols:      game.cols,
+      rows:      game.rows,
       mapData:   game.mapData,
       fragLimit: game.fragLimit,
     });
@@ -366,7 +369,7 @@ io.on('connection', (socket) => {
 
     room.game.start();
     startStateLoop(room);
-    io.to(room.id).emit('gameRestarted', { mapData: room.game.mapData, mode: room.game.mode });
+    io.to(room.id).emit('gameRestarted', { mapData: room.game.mapData, mode: room.game.mode, cols: room.game.cols, rows: room.game.rows });
   });
 
   socket.on('disconnect', () => {
