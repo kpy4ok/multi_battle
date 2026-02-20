@@ -3,8 +3,6 @@
 const { MAPS, SPAWN_POINTS, DM_SPAWN_POINTS, ENEMY_SPAWNS } = require('./maps');
 
 const TILE_SIZE     = 16;
-const MAP_COLS      = 26;
-const MAP_ROWS      = 26;
 const TANK_SIZE     = 14;
 const BULLET_SPEED  = 5;
 const TANK_SPEED    = 1.5;
@@ -15,9 +13,9 @@ const MAX_ENEMIES   = 4;
 const TOTAL_ENEMIES = 20;
 
 // Deathmatch
-const DM_FRAG_LIMIT       = 20;   // first to 20 kills wins
+const DM_FRAG_LIMIT       = 20;
 const DM_RESPAWN_DELAY_MS = 2000;
-const DM_MAX_BOTS         = 4;    // bots in DM+bots mode
+const DM_MAX_BOTS         = 4;
 
 // Enemy AI
 const ENEMY_SHOOT_INTERVAL = 2000;
@@ -44,9 +42,16 @@ class GameRoom {
     this.mapIndex = mapIndex;
     const map     = MAPS[mapIndex];
     this.mapData  = [...map.tiles];
+    this.cols     = map.cols || 26;
+    this.rows     = map.rows || 26;
     this.mode     = map.mode || 'coop';
     this.isDM     = this.mode === 'deathmatch' || this.mode === 'deathmatch_bots';
     this.maxPlayers = this.isDM ? 8 : 4;
+
+    // Per-map spawn points
+    this._spawnPoints    = (map.spawnPoints    && map.spawnPoints.length)    ? map.spawnPoints    : SPAWN_POINTS;
+    this._dmSpawnPoints  = (map.dmSpawnPoints  && map.dmSpawnPoints.length)  ? map.dmSpawnPoints  : DM_SPAWN_POINTS;
+    this._enemySpawns    = (map.enemySpawns    && map.enemySpawns.length)    ? map.enemySpawns    : ENEMY_SPAWNS;
 
     this.players  = {};      // socketId -> player
     this.bots     = [];      // DM bots (treated like players but AI-driven)
@@ -80,7 +85,7 @@ class GameRoom {
   getPlayerCount() { return Object.keys(this.players).length; }
 
   getSpawnPoint(idx) {
-    const pts = this.isDM ? DM_SPAWN_POINTS : SPAWN_POINTS;
+    const pts = this.isDM ? this._dmSpawnPoints : this._spawnPoints;
     return pts[idx % pts.length];
   }
 
@@ -302,7 +307,7 @@ class GameRoom {
   // ── Movement / collision ────────────────────────────────
   _tryMove(entity, dx, dy) {
     const nx = entity.x + dx, ny = entity.y + dy;
-    if (nx < 0 || ny < 0 || nx + TANK_SIZE > MAP_COLS * TILE_SIZE || ny + TANK_SIZE > MAP_ROWS * TILE_SIZE) return;
+    if (nx < 0 || ny < 0 || nx + TANK_SIZE > this.cols * TILE_SIZE || ny + TANK_SIZE > this.rows * TILE_SIZE) return;
     if (!this._collidesWithTiles(nx, ny)) {
       if (!this._collidesWithTanks(entity, nx, ny)) {
         entity.x = nx; entity.y = ny;
@@ -315,8 +320,8 @@ class GameRoom {
     const x1 = Math.floor(x / TILE_SIZE),             y1 = Math.floor(y / TILE_SIZE);
     const x2 = Math.floor((x + TANK_SIZE - 1) / TILE_SIZE), y2 = Math.floor((y + TANK_SIZE - 1) / TILE_SIZE);
     for (let ty = y1; ty <= y2; ty++) for (let tx = x1; tx <= x2; tx++) {
-      if (tx < 0 || ty < 0 || tx >= MAP_COLS || ty >= MAP_ROWS) return true;
-      if (!passable.has(this.mapData[ty * MAP_COLS + tx])) return true;
+      if (tx < 0 || ty < 0 || tx >= this.cols || ty >= this.rows) return true;
+      if (!passable.has(this.mapData[ty * this.cols + tx])) return true;
     }
     return false;
   }
@@ -363,7 +368,7 @@ class GameRoom {
       let dead = false;
 
       // Bounds
-      if (b.x < 0 || b.y < 0 || b.x >= MAP_COLS * TILE_SIZE || b.y >= MAP_ROWS * TILE_SIZE) {
+      if (b.x < 0 || b.y < 0 || b.x >= this.cols * TILE_SIZE || b.y >= this.rows * TILE_SIZE) {
         dead = true;
       }
 
@@ -371,8 +376,8 @@ class GameRoom {
       if (!dead) {
         const tx = Math.floor((b.x + BULLET_SIZE / 2) / TILE_SIZE);
         const ty = Math.floor((b.y + BULLET_SIZE / 2) / TILE_SIZE);
-        if (tx >= 0 && ty >= 0 && tx < MAP_COLS && ty < MAP_ROWS) {
-          const idx  = ty * MAP_COLS + tx;
+        if (tx >= 0 && ty >= 0 && tx < this.cols && ty < this.rows) {
+          const idx  = ty * this.cols + tx;
           const tile = this.mapData[idx];
           if (tile === 1) { this.mapData[idx] = 0; dead = true; }
           else if (tile === 2) { dead = true; }
@@ -460,10 +465,8 @@ class GameRoom {
   }
 
   _dmRespawn(entity) {
-    // Pick a spawn point not occupied by anyone
-    const pts = DM_SPAWN_POINTS;
+    const pts = this._dmSpawnPoints;
     let best  = pts[Math.floor(Math.random() * pts.length)];
-    // Try to pick the farthest from any living entity
     let maxMinDist = -1;
     const living = [...Object.values(this.players), ...this.bots].filter(e => e.alive && e !== entity);
     for (const pt of pts) {
@@ -494,7 +497,7 @@ class GameRoom {
   // ── Classic enemy spawning ──────────────────────────────
   spawnEnemy() {
     if (this.enemiesRemaining <= 0) return;
-    const spawnPt = ENEMY_SPAWNS[this.nextEnemyId % ENEMY_SPAWNS.length];
+    const spawnPt = this._enemySpawns[this.nextEnemyId % this._enemySpawns.length];
     this.enemies.push({
       id:          'e' + this.nextEnemyId++,
       x:           spawnPt.x * TILE_SIZE + 1,
@@ -543,6 +546,8 @@ class GameRoom {
   getState() {
     return {
       mode:     this.mode,
+      cols:     this.cols,
+      rows:     this.rows,
       mapData:  this.mapData,
       players:  Object.values(this.players).map(p => ({
         id:     p.id,
